@@ -32,12 +32,19 @@ const CONFIG = {
         '0.05': '#8b4726',
         '0.10': '#ffff00',
         '0.15': '#ff0000',
-        '0.30': '#ff00ff',
-        '0.45': '#912cee',
-        '0.60': '#104e8b',
+        '30%': '#ff00ff',
+        '45%': '#912cee',
+        '60%': '#104e8b',
         '15%': '#ff0000',
         '30%': '#ff00ff',
         'DEFAULT': '#3b82f6'
+    },
+    alertsApi: 'https://api.weather.gov/alerts/active',
+    alertColors: {
+        'Tornado Warning': '#ff0000',
+        'Tornado Watch': '#ffff00',
+        'Severe Thunderstorm Warning': '#ffa500',
+        'Severe Thunderstorm Watch': '#db7093'
     }
 };
 
@@ -135,6 +142,92 @@ async function loadAllLayers() {
             console.error(`Error loading layer ${layerInfo.name}:`, error);
         }
     }
+    
+    // Load Live Alerts
+    loadLiveAlerts();
+}
+
+async function loadLiveAlerts() {
+    try {
+        const events = ['Tornado Warning', 'Tornado Watch', 'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch'];
+        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}`;
+        
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' }
+        });
+        
+        if (!response.ok) throw new Error('Alerts fetch failed');
+        const data = await response.json();
+        
+        if (layerGroups['alerts']) map.removeLayer(layerGroups['alerts']);
+        
+        const alertsLayer = L.geoJSON(data, {
+            style: (feature) => {
+                const event = feature.properties.event;
+                const color = CONFIG.alertColors[event] || '#ffffff';
+                return {
+                    fillColor: color,
+                    weight: 2,
+                    opacity: 1,
+                    color: color,
+                    fillOpacity: 0.4
+                };
+            },
+            onEachFeature: (feature, layer) => {
+                const props = feature.properties;
+                const content = `
+                    <div class="popup-content">
+                        <h4 class="text-sm font-bold" style="color: ${CONFIG.alertColors[props.event]}">${props.event}</h4>
+                        <p class="text-xs mt-1 font-semibold">${props.headline || 'Active Alert'}</p>
+                        <hr class="my-2 border-white/10">
+                        <div class="text-[10px] text-slate-300 leading-tight mb-2">${props.description ? props.description.substring(0, 200) + '...' : ''}</div>
+                        <div class="text-[10px] text-slate-400">Expires: ${new Date(props.expires).toLocaleString()}</div>
+                    </div>
+                `;
+                layer.bindPopup(content, { maxWidth: 250 });
+                
+                layer.on('mouseover', function() {
+                    this.setStyle({ fillOpacity: 0.7, weight: 4 });
+                });
+                layer.on('mouseout', function() {
+                    this.setStyle({ fillOpacity: 0.4, weight: 2 });
+                });
+            }
+        });
+        
+        alertsLayer.addTo(map);
+        layerGroups['alerts'] = alertsLayer;
+        
+        // Update UI with alert counts
+        updateAlertUI(data.features);
+        
+    } catch (error) {
+        console.error('Error loading live alerts:', error);
+    }
+}
+
+function updateAlertUI(features) {
+    const counts = {
+        'Tornado Warning': 0,
+        'Tornado Watch': 0,
+        'Severe Thunderstorm Warning': 0,
+        'Severe Thunderstorm Watch': 0
+    };
+    
+    features.forEach(f => {
+        if (counts.hasOwnProperty(f.properties.event)) {
+            counts[f.properties.event]++;
+        }
+    });
+    
+    const container = document.getElementById('alert-status');
+    if (!container) return;
+    
+    let html = '';
+    if (counts['Tornado Warning'] > 0) html += `<span class="flex items-center gap-1.5 text-red-500 font-bold animate-pulse"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${counts['Tornado Warning']} TOR-W</span>`;
+    if (counts['Severe Thunderstorm Warning'] > 0) html += `<span class="flex items-center gap-1.5 text-orange-500 font-bold"><span class="w-2 h-2 rounded-full bg-orange-500"></span> ${counts['Severe Thunderstorm Warning']} SVR-W</span>`;
+    
+    container.innerHTML = html || '<span class="text-slate-500 text-xs italic">No active warnings</span>';
 }
 
 
