@@ -228,9 +228,11 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    const wmsUrl = `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/${siteId.toLowerCase()}.cgi?`;
+    // IEM requires 'layers=single' and a 'radar=XXXX' parameter for individual sites
+    const wmsUrl = `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi`;
     activeRadarLayer = L.tileLayer.wms(wmsUrl, {
-        layers: 'nexrad-n0r',
+        layers: 'single',
+        radar: siteId.toUpperCase(),
         format: 'image/png',
         transparent: true,
         version: '1.1.1',
