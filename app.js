@@ -228,17 +228,14 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    // IEM 'ridge.cgi' is the correct endpoint for individual site-specific WMS
-    const wmsUrl = `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/ridge.cgi`;
-    activeRadarLayer = L.tileLayer.wms(wmsUrl, {
-        layers: 'single',
-        sector: siteId.toUpperCase(),
-        prod: 'N0Q', // High-res Base Reflectivity
-        format: 'image/png',
-        transparent: true,
-        version: '1.1.1',
+    // Using IEM's Tile Map Service (TMS) for better reliability and cross-origin support
+    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::N0Q-${siteId.toUpperCase()}-0/{z}/{x}/{y}.png`;
+    
+    activeRadarLayer = L.tileLayer(tmsUrl, {
+        tms: true,
         opacity: 0.8,
-        zIndex: 500
+        zIndex: 500,
+        attribution: 'IEM Radar'
     }).addTo(map);
 
     activeRadarId = siteId;
