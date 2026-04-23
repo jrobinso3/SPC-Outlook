@@ -159,6 +159,18 @@ async function loadLiveAlerts() {
         if (!response.ok) throw new Error('Alerts fetch failed');
         const data = await response.json();
         
+        // Sort features so higher priority alerts (Tornado Warnings) are drawn last/on top
+        const priorityOrder = {
+            'Tornado Warning': 4,
+            'Severe Thunderstorm Warning': 3,
+            'Tornado Watch': 2,
+            'Severe Thunderstorm Watch': 1
+        };
+        
+        data.features.sort((a, b) => {
+            return (priorityOrder[a.properties.event] || 0) - (priorityOrder[b.properties.event] || 0);
+        });
+
         if (layerGroups['alerts']) map.removeLayer(layerGroups['alerts']);
         
         const alertsLayer = L.geoJSON(data, {
@@ -247,6 +259,11 @@ function switchLayer(layerInfo, layer) {
     activeLayer = layer;
     document.querySelector('#active-day-label span').textContent = layerInfo.name;
     document.getElementById('layer-menu').classList.remove('active');
+    
+    // Ensure alerts always stay on top of the new outlook layer
+    if (layerGroups['alerts']) {
+        layerGroups['alerts'].bringToFront();
+    }
 }
 
 
