@@ -263,7 +263,7 @@ function getFeatureStyle(feature) {
     return {
         fillColor: color,
         weight: 1.5,
-        opacity: 0.8,
+        opacity: 1,
         color: color,
         fillOpacity: 0.35
     };
