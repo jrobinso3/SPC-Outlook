@@ -191,6 +191,42 @@ function formatSPCDate(dateStr) {
     }
 }
 
+function cleanDiscussionText(text) {
+    if (!text) return "";
+    
+    // NWS text often has hard line breaks at ~75 characters.
+    // We want to merge these while preserving paragraph breaks and headers.
+    const lines = text.split('\n');
+    let paragraphs = [];
+    let currentParagraph = [];
+
+    for (let line of lines) {
+        const trimmedLine = line.trim();
+        
+        // Check for common SPC/NWS "header" patterns (starts with dots or is short/all caps)
+        const isHeader = trimmedLine.startsWith('...') || 
+                         (trimmedLine.length > 0 && trimmedLine.length < 50 && trimmedLine === trimmedLine.toUpperCase() && !trimmedLine.includes(' '));
+        
+        if (isHeader || trimmedLine === '') {
+            if (currentParagraph.length > 0) {
+                paragraphs.push(currentParagraph.join(' '));
+                currentParagraph = [];
+            }
+            if (trimmedLine !== '') {
+                paragraphs.push(trimmedLine);
+            }
+        } else {
+            currentParagraph.push(trimmedLine);
+        }
+    }
+    
+    if (currentParagraph.length > 0) {
+        paragraphs.push(currentParagraph.join(' '));
+    }
+    
+    return paragraphs.join('\n\n');
+}
+
 function onEachFeature(feature, layer, layerInfo) {
     const props = feature.properties;
     const label = (props.label || props.LABEL || '').toUpperCase();
@@ -262,7 +298,8 @@ async function showDiscussion(type) {
         // Find the technical text inside <pre>
         const pre = doc.querySelector('pre');
         if (pre) {
-            body.innerHTML = `<pre>${pre.innerText}</pre>`;
+            const processedText = cleanDiscussionText(pre.innerText);
+            body.innerHTML = `<pre>${processedText}</pre>`;
         } else {
             body.innerHTML = '<div class="placeholder">Technical discussion text not found for this product.</div>';
         }
