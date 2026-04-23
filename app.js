@@ -112,7 +112,7 @@ async function loadAllLayers() {
             const data = await fetchGeoJSON(layerInfo.id);
             const geoJsonLayer = L.geoJSON(data, {
                 style: getFeatureStyle,
-                onEachFeature: onEachFeature
+                onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
             });
 
             layerGroups[layerInfo.key] = geoJsonLayer;
@@ -191,7 +191,7 @@ function formatSPCDate(dateStr) {
     }
 }
 
-function onEachFeature(feature, layer) {
+function onEachFeature(feature, layer, layerInfo) {
     const props = feature.properties;
     const label = (props.label || props.LABEL || '').toUpperCase();
     const label2 = props.label2 || props.LABEL_2 || 'Convective Outlook Area';
@@ -200,19 +200,27 @@ function onEachFeature(feature, layer) {
 
     const content = `
         <div class="popup-content">
-            <h4 style="color: ${CONFIG.colors[label] || '#fff'}">${label || 'Outlook'}</h4>
-            <p>${label2}</p>
-            <hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="margin-bottom: 8px;"><small>Expires: ${readableValid}</small></div>
-            <button class="view-discussion-btn" style="background: var(--accent-color); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; width: 100%;">View Discussion</button>
+            <h4 class="text-lg font-bold mb-1" style="color: ${CONFIG.colors[label] || '#fff'}">${label || 'Outlook'}</h4>
+            <p class="text-xs text-slate-300 mb-2">${label2}</p>
+            <hr class="my-2 border-white/10">
+            <div class="mb-3 text-[10px] text-slate-400">Expires: ${readableValid}</div>
+            <button class="view-discussion-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
+                View Technical Discussion
+            </button>
         </div>
     `;
-    layer.bindPopup(content);
+    layer.bindPopup(content, {
+        className: 'custom-popup',
+        maxWidth: 220
+    });
     
-    layer.on('click', function() {
-        const activeLayerMeta = CONFIG.layers.find(l => l.name === document.getElementById('active-day-label').textContent);
-        if (activeLayerMeta && activeLayerMeta.discussion) {
-            showDiscussion(activeLayerMeta.discussion);
+    layer.on('popupopen', function(e) {
+        const btn = e.popup.getElement().querySelector('.view-discussion-btn');
+        if (btn) {
+            btn.onclick = (event) => {
+                event.preventDefault();
+                showDiscussion(layerInfo.discussion);
+            };
         }
     });
 
@@ -230,11 +238,21 @@ async function showDiscussion(type) {
     const body = document.getElementById('discussion-body');
     
     sidePanel.classList.add('active');
-    body.innerHTML = '<div class="placeholder">Fetching latest technical discussion...</div>';
+    body.innerHTML = '<div class="flex items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>';
     
     try {
-        const url = `${CONFIG.discussionBase}/${type}otlk.html`;
-        const response = await fetch(url);
+        const targetUrl = `${CONFIG.discussionBase}/${type}otlk.html`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+        
+        // Try direct fetch first (works on localhost), then fallback to proxy (for live site)
+        let response;
+        try {
+            response = await fetch(targetUrl);
+            if (!response.ok) throw new Error();
+        } catch (e) {
+            response = await fetch(proxyUrl);
+        }
+
         if (!response.ok) throw new Error('Failed to fetch discussion');
         
         const html = await response.text();
