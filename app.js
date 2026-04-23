@@ -234,7 +234,6 @@ function loadRadar(siteId) {
     const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemSiteId.toUpperCase()}-N0Q-0/{z}/{x}/{y}.png`;
     
     activeRadarLayer = L.tileLayer(tmsUrl, {
-        tms: true,
         opacity: 0.8,
         zIndex: 500,
         attribution: 'IEM Radar'
