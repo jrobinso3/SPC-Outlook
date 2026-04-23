@@ -228,8 +228,11 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    // Using IEM's Tile Map Service (TMS) for better reliability and cross-origin support
-    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::N0Q-${siteId.toUpperCase()}-0/{z}/{x}/{y}.png`;
+    // Convert 4-letter ICAO (e.g., KTOP) to 3-letter NEXRAD ID (e.g., TOP) for IEM
+    const iemSiteId = siteId.startsWith('K') ? siteId.substring(1) : siteId;
+
+    // IEM TMS format requires [RADAR]-[PRODUCT]-[TIME]
+    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemSiteId.toUpperCase()}-N0Q-0/{z}/{x}/{y}.png`;
     
     activeRadarLayer = L.tileLayer(tmsUrl, {
         tms: true,
