@@ -93,6 +93,18 @@
         .leaflet-control-zoom-in, .leaflet-control-zoom-out {
             @apply !bg-panel-bg !backdrop-blur-xl !text-white !border-white/10 !rounded-xl !mb-1;
         }
+
+        /* Confirmed Tornado Animation */
+        @keyframes tor-pulse {
+            0% { stroke-width: 4; stroke-opacity: 1; }
+            50% { stroke-width: 10; stroke-opacity: 0.5; }
+            100% { stroke-width: 4; stroke-opacity: 1; }
+        }
+
+        .confirmed-tor {
+            animation: tor-pulse 1.2s infinite ease-in-out;
+            stroke-dasharray: 10, 5;
+        }
     </style>
 </head>
 <body class="bg-[#0b0e14]">

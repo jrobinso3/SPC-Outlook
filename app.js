@@ -163,14 +163,22 @@ async function loadLiveAlerts() {
         
         const alertsLayer = L.geoJSON(data, {
             style: (feature) => {
-                const event = feature.properties.event;
+                const props = feature.properties;
+                const event = props.event;
                 const color = CONFIG.alertColors[event] || '#ffffff';
+                
+                // Detect confirmed (observed) tornadoes
+                const isConfirmed = props.parameters && 
+                                   props.parameters.tornadoDetection && 
+                                   props.parameters.tornadoDetection.some(v => v.toUpperCase().includes('OBSERVED'));
+
                 return {
                     fillColor: color,
-                    weight: 2,
+                    weight: isConfirmed ? 5 : 2,
                     opacity: 1,
                     color: color,
-                    fillOpacity: 0.4
+                    fillOpacity: isConfirmed ? 0.6 : 0.4,
+                    className: isConfirmed ? 'confirmed-tor' : ''
                 };
             },
             onEachFeature: (feature, layer) => {
