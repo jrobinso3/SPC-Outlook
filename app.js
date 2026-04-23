@@ -196,15 +196,29 @@ function localizeTimeStrings(text, baseDateStr) {
     
     const year = parseInt(baseDateStr.substring(0, 4));
     const month = parseInt(baseDateStr.substring(4, 6)) - 1;
-    const day = parseInt(baseDateStr.substring(6, 8));
+    let defaultDay = parseInt(baseDateStr.substring(6, 8));
 
-    // Regex for 1630Z, 12Z, 2000 UTC, 06 UTC, etc.
-    const timeRegex = /\b(\d{1,2})(\d{2})?\s?(Z|UTC)\b/g;
+    // Catch DDHHMMZ (6 digits), HHMMZ (4 digits), and HHZ (2 digits)
+    const timeRegex = /\b(\d{2,6})\s?(Z|UTC)\b/g;
     
-    return text.replace(timeRegex, (match, hh, mm, tz) => {
-        const hour = parseInt(hh);
-        const min = mm ? parseInt(mm) : 0;
+    return text.replace(timeRegex, (match, digits, tz) => {
+        let day = defaultDay;
+        let hour, min;
         
+        if (digits.length === 6) {
+            day = parseInt(digits.substring(0, 2));
+            hour = parseInt(digits.substring(2, 4));
+            min = parseInt(digits.substring(4, 6));
+        } else if (digits.length === 4) {
+            hour = parseInt(digits.substring(0, 2));
+            min = parseInt(digits.substring(2, 4));
+        } else {
+            hour = parseInt(digits);
+            min = 0;
+        }
+        
+        if (isNaN(hour) || hour > 24) return match;
+
         const date = new Date(Date.UTC(year, month, day, hour, min));
         const localTime = date.toLocaleTimeString(undefined, {
             hour: 'numeric',
