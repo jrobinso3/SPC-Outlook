@@ -191,16 +191,44 @@ function formatSPCDate(dateStr) {
     }
 }
 
-function cleanDiscussionText(text) {
+function localizeTimeStrings(text, baseDateStr) {
+    if (!baseDateStr || baseDateStr === 'N/A' || baseDateStr.length < 8) return text;
+    
+    const year = parseInt(baseDateStr.substring(0, 4));
+    const month = parseInt(baseDateStr.substring(4, 6)) - 1;
+    const day = parseInt(baseDateStr.substring(6, 8));
+
+    // Regex for 1630Z, 12Z, 2000 UTC, 06 UTC, etc.
+    const timeRegex = /\b(\d{1,2})(\d{2})?\s?(Z|UTC)\b/g;
+    
+    return text.replace(timeRegex, (match, hh, mm, tz) => {
+        const hour = parseInt(hh);
+        const min = mm ? parseInt(mm) : 0;
+        
+        const date = new Date(Date.UTC(year, month, day, hour, min));
+        const localTime = date.toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
+        
+        return `${match} [${localTime}]`;
+    });
+}
+
+function cleanDiscussionText(text, baseDateStr) {
     if (!text) return "";
     
+    // First, localize Zulu/UTC times
+    let processedText = localizeTimeStrings(text, baseDateStr);
+
     // NWS text often has hard line breaks at ~75 characters.
-    // We want to merge these while preserving paragraph breaks and headers.
-    const lines = text.split('\n');
+    const lines = processedText.split('\n');
     let paragraphs = [];
     let currentParagraph = [];
 
     for (let line of lines) {
+// ...
         const trimmedLine = line.trim();
         
         // Check for common SPC/NWS "header" patterns (starts with dots or is short/all caps)
@@ -255,7 +283,7 @@ function onEachFeature(feature, layer, layerInfo) {
         if (btn) {
             btn.onclick = (event) => {
                 event.preventDefault();
-                showDiscussion(layerInfo.discussion);
+                showDiscussion(layerInfo.discussion, valid);
             };
         }
     });
@@ -269,7 +297,7 @@ function onEachFeature(feature, layer, layerInfo) {
     });
 }
 
-async function showDiscussion(type) {
+async function showDiscussion(type, baseDateStr) {
     const sidePanel = document.getElementById('side-panel');
     const body = document.getElementById('discussion-body');
     
@@ -298,7 +326,7 @@ async function showDiscussion(type) {
         // Find the technical text inside <pre>
         const pre = doc.querySelector('pre');
         if (pre) {
-            const processedText = cleanDiscussionText(pre.innerText);
+            const processedText = cleanDiscussionText(pre.innerText, baseDateStr);
             body.innerHTML = `<pre>${processedText}</pre>`;
         } else {
             body.innerHTML = '<div class="placeholder">Technical discussion text not found for this product.</div>';
