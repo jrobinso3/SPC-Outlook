@@ -198,15 +198,18 @@ async function loadLiveAlerts() {
             onEachFeature: (feature, layer) => {
                 const props = feature.properties;
                 const content = `
-                    <div class="popup-content">
+                    <div class="popup-content max-h-64 overflow-y-auto pr-1">
                         <h4 class="text-sm font-bold" style="color: ${CONFIG.alertColors[props.event]}">${props.event}</h4>
-                        <p class="text-xs mt-1 font-semibold">${props.headline || 'Active Alert'}</p>
+                        <p class="text-[11px] mt-1 font-semibold text-white">${props.headline || 'Active Alert'}</p>
                         <hr class="my-2 border-white/10">
-                        <div class="text-[10px] text-slate-300 leading-tight mb-2">${props.description ? props.description.substring(0, 200) + '...' : ''}</div>
-                        <div class="text-[10px] text-slate-400">Expires: ${new Date(props.expires).toLocaleString()}</div>
+                        <div class="text-[10px] text-slate-300 leading-normal mb-2 whitespace-pre-wrap">${props.description || ''}</div>
+                        <div class="text-[10px] text-slate-400 pt-2 border-t border-white/5">Expires: ${new Date(props.expires).toLocaleString()}</div>
                     </div>
                 `;
-                layer.bindPopup(content, { maxWidth: 250 });
+                layer.bindPopup(content, { 
+                    maxWidth: 280,
+                    className: 'alert-popup'
+                });
                 
                 layer.on('mouseover', function() {
                     this.setStyle({ fillOpacity: 0.7, weight: 4 });
