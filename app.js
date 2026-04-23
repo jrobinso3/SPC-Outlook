@@ -153,11 +153,11 @@ async function loadAllLayers() {
 const radarSites = [
     { id: 'KABR', lat: 45.4558, lon: -98.4131, city: 'Aberdeen, SD' },
     { id: 'KAMA', lat: 35.2333, lon: -101.709, city: 'Amarillo, TX' },
-    { id: 'KATL', lat: 33.3636, lon: -84.5661, city: 'Atlanta, GA' },
+    { id: 'KFFC', lat: 33.3636, lon: -84.5661, city: 'Atlanta, GA' },
     { id: 'KBMX', lat: 33.1722, lon: -86.7697, city: 'Birmingham, AL' },
     { id: 'KBOX', lat: 41.9158, lon: -71.1367, city: 'Boston, MA' },
     { id: 'KCLE', lat: 41.4131, lon: -81.8597, city: 'Cleveland, OH' },
-    { id: 'KDEN', lat: 39.7867, lon: -104.545, city: 'Denver, CO' },
+    { id: 'KFTG', lat: 39.7867, lon: -104.545, city: 'Denver, CO' },
     { id: 'KDIX', lat: 39.9469, lon: -74.4111, city: 'Philadelphia, PA' },
     { id: 'KDMX', lat: 41.7311, lon: -93.7228, city: 'Des Moines, IA' },
     { id: 'KEAX', lat: 38.8103, lon: -94.2644, city: 'Kansas City, MO' },
@@ -167,18 +167,17 @@ const radarSites = [
     { id: 'KHGX', lat: 29.4719, lon: -95.0792, city: 'Houston, TX' },
     { id: 'KICT', lat: 37.6547, lon: -97.4428, city: 'Wichita, KS' },
     { id: 'KLWX', lat: 38.9761, lon: -77.4875, city: 'Washington/Baltimore' },
-    { id: 'KMSP', lat: 44.8489, lon: -93.5656, city: 'Minneapolis, MN' },
+    { id: 'KMPX', lat: 44.8489, lon: -93.5656, city: 'Minneapolis, MN' },
     { id: 'KOAX', lat: 41.3203, lon: -96.3667, city: 'Omaha, NE' },
-    { id: 'KOKC', lat: 35.3331, lon: -97.2778, city: 'Oklahoma City, OK' },
+    { id: 'KTLX', lat: 35.3331, lon: -97.2778, city: 'Oklahoma City, OK' },
     { id: 'KOKX', lat: 40.8656, lon: -72.8639, city: 'New York City, NY' },
-    { id: 'KORD', lat: 41.9578, lon: -87.9058, city: 'Chicago, IL' },
+    { id: 'KLOT', lat: 41.9578, lon: -87.9058, city: 'Chicago, IL' },
     { id: 'KPBZ', lat: 40.5317, lon: -80.2183, city: 'Pittsburgh, PA' },
-    { id: 'KPHX', lat: 33.2892, lon: -111.67, city: 'Phoenix, AZ' },
+    { id: 'KIWA', lat: 33.2892, lon: -111.67, city: 'Phoenix, AZ' },
     { id: 'KSHV', lat: 32.4508, lon: -93.8414, city: 'Shreveport, LA' },
-    { id: 'KSTL', lat: 38.6911, lon: -90.6828, city: 'St Louis, MO' },
-    { id: 'KTOP', lat: 39.0733, lon: -95.6258, city: 'Topeka, KS' },
-    { id: 'KTWC', lat: 32.2297, lon: -110.86, city: 'Tucson, AZ' },
-    { id: 'KTLX', lat: 35.3331, lon: -97.2778, city: 'Norman, OK' }
+    { id: 'KLSX', lat: 38.6911, lon: -90.6828, city: 'St Louis, MO' },
+    { id: 'KTWX', lat: 39.0733, lon: -95.6258, city: 'Topeka, KS' },
+    { id: 'KEMX', lat: 32.2297, lon: -110.86, city: 'Tucson, AZ' }
 ];
 
 let radarSitesLayer;
