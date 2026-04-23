@@ -226,7 +226,7 @@ function localizeTimeStrings(text, baseDateStr) {
             timeZoneName: 'short'
         });
         
-        return `${match} [${localTime}]`;
+        return `${localTime} (${match})`;
     });
 }
 
