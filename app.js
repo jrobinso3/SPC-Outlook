@@ -228,20 +228,22 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    // IEM requires 'layers=single' and a 'radar=XXXX' parameter for individual sites
-    const wmsUrl = `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi`;
+    // IEM 'ridge.cgi' is the correct endpoint for individual site-specific WMS
+    const wmsUrl = `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/ridge.cgi`;
     activeRadarLayer = L.tileLayer.wms(wmsUrl, {
         layers: 'single',
-        radar: siteId.toUpperCase(),
+        sector: siteId.toUpperCase(),
+        prod: 'N0Q', // High-res Base Reflectivity
         format: 'image/png',
         transparent: true,
         version: '1.1.1',
-        opacity: 0.75,
+        opacity: 0.8,
         zIndex: 500
     }).addTo(map);
 
     activeRadarId = siteId;
     
+    // Maintain stacking: Radar > Outlooks, but Alerts > Radar
     if (layerGroups['alerts']) layerGroups['alerts'].bringToFront();
 }
 
