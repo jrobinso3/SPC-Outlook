@@ -172,9 +172,11 @@ async function loadLiveAlerts() {
                                    props.parameters.tornadoDetection && 
                                    props.parameters.tornadoDetection.some(v => v.toUpperCase().includes('OBSERVED'));
 
+                const isTornadoWarning = event === 'Tornado Warning';
+
                 return {
                     fillColor: color,
-                    weight: isConfirmed ? 5 : 2,
+                    weight: isConfirmed ? 6 : (isTornadoWarning ? 4 : 2),
                     opacity: 1,
                     color: color,
                     fillOpacity: isConfirmed ? 0.6 : 0.4,
