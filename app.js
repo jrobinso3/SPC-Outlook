@@ -309,10 +309,14 @@ function updateLegend(layerInfo) {
     categories.forEach(cat => {
         const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
         const item = document.createElement('div');
-        item.className = 'flex items-center gap-2';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '8px';
+        item.style.marginBottom = '4px';
+
         item.innerHTML = `
-            <div class="w-3 h-3 rounded" style="background-color: ${color}"></div>
-            <span class="text-[10px] text-slate-400 font-medium">${cat}</span>
+            <div style="width: 12px; height: 12px; border-radius: 3px; background-color: ${color}; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${cat}</span>
         `;
         legendItems.appendChild(item);
     });
