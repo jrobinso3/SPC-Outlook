@@ -294,35 +294,34 @@ function getAlertStyle(feature) {
     const headline = (props.headline || '').toUpperCase();
     const desc = (props.description || '').toUpperCase();
     
-    let color = '#3b82f6'; // Default blue
+    let color = '#3b82f6'; 
     let weight = 2;
     let fillOpacity = 0.3;
 
     if (event.includes('Tornado Warning')) {
-        // High-precision detection for Confirmed/Emergency status
         const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
         const isObserved = desc.includes('TORNADO...OBSERVED') || desc.includes('OBSERVED TORNADO');
-        const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION');
+        const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || headline.includes('PDS') || desc.includes('PDS');
 
         if (isEmergency) {
-            color = '#ff00ff'; // Intense Magenta for Emergency
-            weight = 4;
+            color = '#ff00ff'; 
+            weight = 5;
             fillOpacity = 0.5;
         } else if (isObserved || isPDS) {
-            color = '#8b0000'; // Deep Crimson for Confirmed/PDS
-            weight = 3;
+            color = '#8b0000'; // Deep Crimson
+            weight = 4;
             fillOpacity = 0.4;
         } else {
-            color = '#ff0000'; // Standard Red for Radar Indicated
+            color = '#ff0000'; // Standard Red
             weight = 2;
             fillOpacity = 0.3;
         }
     } else if (event.includes('Tornado Watch')) {
         color = '#ffff00';
     } else if (event.includes('Severe Thunderstorm Warning')) {
-        const isDestructive = desc.includes('DESTRUCTIVE');
+        const isDestructive = desc.includes('DESTRUCTIVE') || desc.includes('80 MPH');
         if (isDestructive) {
-            color = '#cc7a00'; // Darker orange for high-impact
+            color = '#cc7a00';
             weight = 3;
         } else {
             color = '#ffa500';
@@ -342,12 +341,37 @@ function getAlertStyle(feature) {
 
 function onEachAlert(feature, layer) {
     const props = feature.properties;
+    const desc = (props.description || '').toUpperCase();
+    const headline = (props.headline || '').toUpperCase();
+    
+    // Check for PDS/Emergency to add the special "Magenta Stripe" overlay
+    const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || headline.includes('PDS');
+    const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
+
+    if (isPDS || isEmergency) {
+        // Create a thin magenta inner-border
+        const innerStripe = L.geoJSON(feature, {
+            style: {
+                color: '#ff00ff',
+                weight: 1.5,
+                fill: false,
+                dashArray: '5, 5',
+                opacity: 0.9,
+                pane: 'alertPane'
+            },
+            interactive: false
+        });
+        innerStripe.addTo(map);
+    }
+
     const popupContent = `
-        <div class="p-1">
-            <h3 class="font-bold text-slate-900">${props.event}</h3>
-            <p class="text-xs text-slate-600 mt-1">${props.headline || 'Active Warning'}</p>
-            <div class="mt-2 text-[10px] text-slate-400">
-                Expires: ${new Date(props.expires).toLocaleTimeString()}
+        <div class="p-1 max-w-xs">
+            <h3 class="font-bold text-slate-900 border-b border-slate-100 pb-1">${props.event}</h3>
+            ${isPDS ? '<div class="mt-1 text-[10px] font-bold text-magenta-500 uppercase tracking-tighter">Particularly Dangerous Situation</div>' : ''}
+            <p class="text-xs text-slate-600 mt-1 line-clamp-3">${props.headline || 'Active Warning'}</p>
+            <div class="mt-2 flex items-center justify-between text-[9px] text-slate-400">
+                <span>Expires: ${new Date(props.expires).toLocaleTimeString()}</span>
+                <span class="font-mono">${props.id.split('.').pop()}</span>
             </div>
         </div>
     `;
