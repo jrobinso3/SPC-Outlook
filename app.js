@@ -530,7 +530,7 @@ function loadRadar(stationId, isHeartbeat = false) {
         }
     });
 
-    newRadarLayer.addTo(map);
+    pendingRadarLayer.addTo(map);
     
     // Highlight active station logic remains the same
     if (radarSitesLayer) {
