@@ -57,6 +57,17 @@ function initMap() {
         zoomControl: false
     }).setView(CONFIG.mapCenter, CONFIG.initialZoom);
 
+    // Create custom panes for robust layer stacking
+    // Order: Outlooks (350) < Radar (450) < Alerts (550)
+    map.createPane('outlookPane');
+    map.getPane('outlookPane').style.zIndex = 350;
+
+    map.createPane('radarPane');
+    map.getPane('radarPane').style.zIndex = 450;
+
+    map.createPane('alertPane');
+    map.getPane('alertPane').style.zIndex = 550;
+
     // Add zoom control to top-right
     L.control.zoom({
         position: 'topright'
@@ -119,6 +130,7 @@ async function loadAllLayers() {
             const data = await fetchGeoJSON(layerInfo.id);
             const geoJsonLayer = L.geoJSON(data, {
                 style: getFeatureStyle,
+                pane: 'outlookPane',
                 onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
             });
 
@@ -239,9 +251,9 @@ function loadRadar(siteId) {
         format: 'image/png',
         transparent: true,
         version: '1.1.1',
-        _cb: cacheBuster, // Force cache refresh
+        _cb: cacheBuster,
         opacity: 0.8,
-        zIndex: 500,
+        pane: 'radarPane',
         attribution: 'NWS Radar'
     }).addTo(map);
 
@@ -278,6 +290,7 @@ async function loadLiveAlerts() {
         if (layerGroups['alerts']) map.removeLayer(layerGroups['alerts']);
         
         const alertsLayer = L.geoJSON(data, {
+            pane: 'alertPane',
             style: (feature) => {
                 const props = feature.properties;
                 const event = props.event;
