@@ -527,9 +527,13 @@ async function fetchRadarSites() {
         // Now that sites are loaded, initialize markers and listeners
         initRadar();
         
-        // Proactively load the nearest radar if radar is enabled
-        if (showRadar && !activeRadarId) {
-            findNearestRadar(true);
+        // Proactively load radar if enabled
+        if (showRadar) {
+            if (activeRadarId) {
+                loadRadar(activeRadarId);
+            } else {
+                findNearestRadar(true);
+            }
         }
     } catch (error) {
         console.error('Error fetching radar sites:', error);
