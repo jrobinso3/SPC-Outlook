@@ -147,6 +147,13 @@ function initMap() {
         pane: 'labelsPane'
     }).addTo(map);
 
+    // Major Roads overlay (Top)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        pane: 'labelsPane',
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
+        maxZoom: 20
+    }).addTo(map);
+
     // Initialize core systems
     initRadar();
     fetchRadarSites();
