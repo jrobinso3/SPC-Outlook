@@ -485,13 +485,20 @@ function onEachAlert(feature, layer) {
     const desc = (props.description || '').toUpperCase();
     const headline = (props.headline || '').toUpperCase();
     
-    // Exhaustive PDS search for the overlay
+    const parameters = props.parameters || {};
+    const tornadoThreat = (parameters.tornadoDamageThreat || [''])[0].toUpperCase();
+    
+    // Exhaustive PDS search: scan description, headline, instruction, and technical parameters
     const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
                   headline.includes('PARTICULARLY DANGEROUS SITUATION') || 
                   (props.instruction || '').toUpperCase().includes('PARTICULARLY DANGEROUS SITUATION') ||
-                  headline.includes('PDS');
+                  headline.includes('PDS') ||
+                  tornadoThreat === 'CONSIDERABLE' ||
+                  tornadoThreat === 'DESTRUCTIVE';
     
-    const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
+    const isEmergency = desc.includes('TORNADO EMERGENCY') || 
+                        headline.includes('EMERGENCY') ||
+                        tornadoThreat === 'CATASTROPHIC';
 
     if (isPDS || isEmergency) {
         // Create a thin magenta inner-border
