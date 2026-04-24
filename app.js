@@ -289,20 +289,54 @@ function updateLegend(layerInfo) {
 }
 
 function getAlertStyle(feature) {
-    const event = feature.properties.event;
-    let color = '#3b82f6'; // Default blue
+    const props = feature.properties;
+    const event = props.event;
+    const headline = (props.headline || '').toUpperCase();
+    const desc = (props.description || '').toUpperCase();
     
-    if (event.includes('Tornado Warning')) color = '#ff0000';
-    else if (event.includes('Tornado Watch')) color = '#ffff00';
-    else if (event.includes('Severe Thunderstorm Warning')) color = '#ffa500';
-    else if (event.includes('Severe Thunderstorm Watch')) color = '#db7093';
+    let color = '#3b82f6'; // Default blue
+    let weight = 2;
+    let fillOpacity = 0.3;
+
+    if (event.includes('Tornado Warning')) {
+        // High-precision detection for Confirmed/Emergency status
+        const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
+        const isObserved = desc.includes('TORNADO...OBSERVED') || desc.includes('OBSERVED TORNADO');
+        const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION');
+
+        if (isEmergency) {
+            color = '#ff00ff'; // Intense Magenta for Emergency
+            weight = 4;
+            fillOpacity = 0.5;
+        } else if (isObserved || isPDS) {
+            color = '#8b0000'; // Deep Crimson for Confirmed/PDS
+            weight = 3;
+            fillOpacity = 0.4;
+        } else {
+            color = '#ff0000'; // Standard Red for Radar Indicated
+            weight = 2;
+            fillOpacity = 0.3;
+        }
+    } else if (event.includes('Tornado Watch')) {
+        color = '#ffff00';
+    } else if (event.includes('Severe Thunderstorm Warning')) {
+        const isDestructive = desc.includes('DESTRUCTIVE');
+        if (isDestructive) {
+            color = '#cc7a00'; // Darker orange for high-impact
+            weight = 3;
+        } else {
+            color = '#ffa500';
+        }
+    } else if (event.includes('Severe Thunderstorm Watch')) {
+        color = '#db7093';
+    }
     
     return {
         fillColor: color,
-        weight: 2,
+        weight: weight,
         opacity: 1,
         color: color,
-        fillOpacity: 0.3
+        fillOpacity: fillOpacity
     };
 }
 
