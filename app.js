@@ -651,9 +651,9 @@ async function loadLiveAlerts() {
             return (priorityOrder[a.properties.event] || 0) - (priorityOrder[b.properties.event] || 0);
         });
 
-        if (layerGroups['alerts']) map.removeLayer(layerGroups['alerts']);
+        if (activeAlertsLayer) map.removeLayer(activeAlertsLayer);
         
-        const alertsLayer = L.geoJSON(data, {
+        activeAlertsLayer = L.geoJSON(data, {
             pane: 'alertPane',
             style: (feature) => {
                 const props = feature.properties;
@@ -701,8 +701,7 @@ async function loadLiveAlerts() {
             }
         });
         
-        alertsLayer.addTo(map);
-        layerGroups['alerts'] = alertsLayer;
+        if (showAlerts) activeAlertsLayer.addTo(map);
         
         // Update UI with alert counts
         updateAlertUI(data.features);
