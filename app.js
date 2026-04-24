@@ -177,12 +177,19 @@ function initUI() {
     // Radar Product Selection
     const productBtns = document.querySelectorAll('.radar-product-btn');
     productBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent menu from closing
+            
+            if (btn.classList.contains('active')) return;
+
             productBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentRadarProduct = btn.dataset.product;
             
+            console.log(`Switching radar product to: ${currentRadarProduct}`);
+            
             if (activeRadarId && showRadar) {
+                // Force a full reload of the radar station with the new product
                 loadRadar(activeRadarId);
             }
         });
@@ -488,7 +495,8 @@ function loadRadar(stationId) {
         version: '1.3.0',
         pane: 'radarPane',
         opacity: 0.8,
-        attribution: 'NOAA/NWS'
+        attribution: 'NOAA/NWS',
+        _cb: Date.now() // Force refresh
     });
 
     activeRadarLayer.addTo(map);
