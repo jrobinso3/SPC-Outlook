@@ -98,10 +98,7 @@ function initMap() {
     fetchRadarSites();
     loadLiveAlerts();
 
-    // Auto-switch radar based on map center (Initial load)
-    setTimeout(() => {
-        if (showRadar) findNearestRadar();
-    }, 1000);
+    // Auto-switch radar will trigger once fetchRadarSites finishes
 
     // Auto-switch radar based on map center
     map.on('moveend', findNearestRadar);
@@ -109,9 +106,9 @@ function initMap() {
     initUI();
 }
 
-function findNearestRadar() {
-    // Only auto-switch if a radar is already active (user intent)
-    if (!activeRadarId) return;
+function findNearestRadar(force = false) {
+    // Only auto-switch if a radar is already active (user intent) OR if we're forcing an initial load
+    if (!activeRadarId && !force) return;
 
     const center = map.getCenter();
     let minDistance = Infinity;
@@ -412,6 +409,11 @@ async function fetchRadarSites() {
 
         // Now that sites are loaded, initialize markers and listeners
         initRadar();
+        
+        // Proactively load the nearest radar if radar is enabled
+        if (showRadar && !activeRadarId) {
+            findNearestRadar(true);
+        }
     } catch (error) {
         console.error('Error fetching radar sites:', error);
     }
