@@ -212,17 +212,21 @@ async function loadAllLayers() {
 
 async function fetchRadarSites() {
     try {
-        // Fetch official NEXRAD station list from IEM
-        const response = await fetch('https://mesonet.agron.iastate.edu/api/1/nws_radar_stations.json');
+        // Fetch official NEXRAD station list from NWS API
+        const response = await fetch('https://api.weather.gov/radar/stations', {
+            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' }
+        });
         const data = await response.json();
         
-        // Map to our internal format
-        radarSites = data.data.map(site => ({
-            id: site.network.startsWith('T') ? site.id : 'K' + site.id, // Ensure 4-letter ICAO
-            lat: site.lat,
-            lon: site.lon,
-            city: site.name
-        }));
+        // Map to our internal format, filtering for NEXRAD (WSR-88D) to ensure compatibility
+        radarSites = data.features
+            .filter(f => f.properties.stationType === 'WSR-88D')
+            .map(f => ({
+                id: f.properties.id,
+                lat: f.geometry.coordinates[1],
+                lon: f.geometry.coordinates[0],
+                city: f.properties.name
+            }));
 
         // Now that sites are loaded, initialize markers and listeners
         initRadar();
