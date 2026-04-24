@@ -276,7 +276,15 @@
         .bg-spc-slgt { background-color: var(--color-spc-slgt) !important; }
         .bg-spc-enh  { background-color: var(--color-spc-enh) !important; }
         .bg-spc-mdt  { background-color: var(--color-spc-mdt) !important; }
+        .bg-spc-mdt  { background-color: var(--color-spc-mdt) !important; }
         .bg-spc-high { background-color: var(--color-spc-high) !important; }
+
+        /* Hide Zoom Controls on Mobile */
+        @media (max-width: 640px) {
+            .leaflet-control-zoom {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-[#0b0e14]">
