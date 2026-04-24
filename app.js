@@ -54,19 +54,29 @@ const layerGroups = {};
 
 function initMap() {
     map = L.map('map', {
-        zoomControl: false
-    }).setView(CONFIG.mapCenter, CONFIG.initialZoom);
+        zoomControl: false,
+        attributionControl: false
+    }).setView([37.8, -96], 5);
+
+    // Create custom panes for strict Z-index control
+    // Outlooks (Bottom) < Radar (Middle) < Alerts (Top)
+    map.createPane('outlookPane');
+    map.getPane('outlookPane').style.zIndex = 350;
+    map.getPane('outlookPane').style.pointerEvents = 'none';
+
+    map.createPane('radarPane');
+    map.getPane('radarPane').style.zIndex = 450;
+    map.getPane('radarPane').style.pointerEvents = 'none';
+
+    map.createPane('alertPane');
+    map.getPane('alertPane').style.zIndex = 550;
+    map.getPane('alertPane').style.pointerEvents = 'none';
+
+    L.tileLayer(CONFIG.baseMapUrl).addTo(map);
 
     // Add zoom control to top-right
     L.control.zoom({
         position: 'topright'
-    }).addTo(map);
-
-    // Dark Matter base tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
     }).addTo(map);
 
     loadAllLayers();
@@ -119,6 +129,7 @@ async function loadAllLayers() {
             const data = await fetchGeoJSON(layerInfo.id);
             const geoJsonLayer = L.geoJSON(data, {
                 style: getFeatureStyle,
+                pane: 'outlookPane',
                 onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
             });
 
@@ -239,16 +250,13 @@ function loadRadar(siteId) {
         format: 'image/png',
         transparent: true,
         version: '1.1.1',
-        _cb: cacheBuster, // Force cache refresh
+        _cb: cacheBuster,
         opacity: 0.8,
-        zIndex: 500,
+        pane: 'radarPane',
         attribution: 'NWS Radar'
     }).addTo(map);
 
     activeRadarId = siteId;
-    
-    // Maintain stacking: Radar > Outlooks, but Alerts > Radar
-    if (layerGroups['alerts']) layerGroups['alerts'].bringToFront();
 }
 
 async function loadLiveAlerts() {
@@ -278,6 +286,7 @@ async function loadLiveAlerts() {
         if (layerGroups['alerts']) map.removeLayer(layerGroups['alerts']);
         
         const alertsLayer = L.geoJSON(data, {
+            pane: 'alertPane',
             style: (feature) => {
                 const props = feature.properties;
                 const event = props.event;
