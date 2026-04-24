@@ -58,6 +58,7 @@ let showRadar = true;
 let showAlerts = true;
 let showOutlooks = true;
 let currentOutlookKey = 'day1cat';
+let currentRadarProduct = 'sr_bref';
 
 // Radar state variables
 let radarSites = [];
@@ -171,6 +172,20 @@ function initUI() {
             else map.removeLayer(activeLayer);
         }
         renderOutlookList();
+    });
+
+    // Radar Product Selection
+    const productBtns = document.querySelectorAll('.radar-product-btn');
+    productBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            productBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRadarProduct = btn.dataset.product;
+            
+            if (activeRadarId && showRadar) {
+                loadRadar(activeRadarId);
+            }
+        });
     });
 
     closeBtn.addEventListener('click', () => {
@@ -458,35 +473,33 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    // Bust the browser cache every 2 minutes to stay perfectly synchronized with live data
-    const cacheBuster = Math.floor(Date.now() / 120000);
+    activeRadarId = stationId;
     
-    // Switch to official NWS OpenGeo GeoServer (identical to radar.weather.gov)
-    const nwsStation = siteId.toLowerCase();
-    const wmsUrl = `https://opengeo.ncep.noaa.gov/geoserver/${nwsStation}/${nwsStation}_sr_bref/ows`;
+    // Update the WMS layer based on the selected product
+    const layerName = `${stationId.toLowerCase()}_${currentRadarProduct}`;
     
-    activeRadarLayer = L.tileLayer.wms(wmsUrl, {
-        layers: `${nwsStation}_sr_bref`,
+    activeRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${stationId.toLowerCase()}/${layerName}/ows`, {
+        layers: layerName,
         format: 'image/png',
         transparent: true,
-        version: '1.1.1',
-        _cb: cacheBuster,
-        opacity: 0.8,
+        version: '1.3.0',
         pane: 'radarPane',
-        attribution: 'NWS Radar'
-    }).addTo(map);
-
-    activeRadarId = siteId;
-
-    // Update site labels to highlight active site
-    radarSitesLayer.eachLayer(marker => {
-        const id = marker.options.icon.options.html.match(/<span>(.*?)<\/span>/)[1];
-        if (id === siteId) {
-            marker.getElement()?.classList.add('active-radar');
-        } else {
-            marker.getElement()?.classList.remove('active-radar');
-        }
+        opacity: 0.8,
+        attribution: 'NOAA/NWS'
     });
+
+    activeRadarLayer.addTo(map);
+    
+    // Highlight the active station in the sites layer if it exists
+    if (radarSitesLayer) {
+        radarSitesLayer.eachLayer(layer => {
+            if (layer.options && layer.options.stationId === stationId) {
+                layer.setStyle({ color: '#3b82f6', weight: 3, radius: 8 });
+            } else {
+                layer.setStyle({ color: '#64748b', weight: 1, radius: 4 });
+            }
+        });
+    }
 }
 
 async function loadLiveAlerts() {
