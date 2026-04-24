@@ -227,17 +227,22 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
     }
 
-    // Convert 4-letter ICAO (e.g., KTOP) to 3-letter NEXRAD ID (e.g., TOP) for IEM
-    const iemSiteId = siteId.startsWith('K') ? siteId.substring(1) : siteId;
-
-    // Bust the browser cache every 2 minutes so radar returns stay live
+    // Bust the browser cache every 2 minutes to stay perfectly synchronized with live data
     const cacheBuster = Math.floor(Date.now() / 120000);
-    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemSiteId.toUpperCase()}-N0Q-0/{z}/{x}/{y}.png?_=${cacheBuster}`;
     
-    activeRadarLayer = L.tileLayer(tmsUrl, {
+    // Switch to official NWS OpenGeo GeoServer (identical to radar.weather.gov)
+    const nwsStation = siteId.toLowerCase();
+    const wmsUrl = `https://opengeo.ncep.noaa.gov/geoserver/${nwsStation}/${nwsStation}_sr_bref/ows`;
+    
+    activeRadarLayer = L.tileLayer.wms(wmsUrl, {
+        layers: `${nwsStation}_sr_bref`,
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        _cb: cacheBuster, // Force cache refresh
         opacity: 0.8,
         zIndex: 500,
-        attribution: 'IEM Radar'
+        attribution: 'NWS Radar'
     }).addTo(map);
 
     activeRadarId = siteId;
