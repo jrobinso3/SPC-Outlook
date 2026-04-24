@@ -1,0 +1,27 @@
+{
+  "name": "spc-outlook",
+  "version": "1.0.0",
+  "description": "A real-time, high-fidelity severe weather monitoring dashboard that visualizes data from the NOAA Storm Prediction Center (SPC).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jrobinso3/SPC-Outlook.git"
+  },
+  "keywords": [
+    "weather",
+    "spc",
+    "severe-weather",
+    "dashboard",
+    "maps"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^8.0.10"
+  }
+}
