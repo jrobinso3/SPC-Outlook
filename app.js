@@ -457,8 +457,8 @@ function initRadar() {
     });
 }
 
-function loadRadar(siteId) {
-    if (activeRadarId === siteId) {
+function loadRadar(stationId) {
+    if (activeRadarId === stationId) {
         map.removeLayer(activeRadarLayer);
         activeRadarLayer = null;
         activeRadarId = null;
