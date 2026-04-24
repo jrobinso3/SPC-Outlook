@@ -110,12 +110,18 @@ function initMap() {
      
      initUI();
 
-    // High-Frequency Radar Heartbeat (Every 30 seconds for life-safety precision)
     setInterval(() => {
         if (showRadar && activeRadarId) {
             loadRadar(activeRadarId, true);
         }
     }, 30000); 
+
+    // Storm Warning Heartbeat (Every 60 seconds)
+    setInterval(() => {
+        if (showAlerts) {
+            loadLiveAlerts();
+        }
+    }, 60000);
 }
 
 function findNearestRadar(force = false) {
@@ -568,7 +574,7 @@ function loadRadar(stationId, isHeartbeat = false) {
 async function loadLiveAlerts() {
     try {
         const events = ['Tornado Warning', 'Tornado Watch', 'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch'];
-        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}`;
+        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}&_cb=${Date.now()}`;
         
         const response = await fetch(url, {
             headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' }
