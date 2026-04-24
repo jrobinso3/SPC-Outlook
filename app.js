@@ -88,6 +88,11 @@ function initMap() {
 
     loadAllLayers();
     initUI();
+    
+    // Initialize core systems
+    initRadar();
+    fetchRadarSites();
+    loadLiveAlerts();
 
     // Auto-switch radar based on map center
     map.on('moveend', findNearestRadar);
@@ -199,15 +204,6 @@ async function loadAllLayers() {
             console.error(`Error loading layer ${layerInfo.name}:`, error);
         }
     }
-    
-    initRadar(); // Initialize empty layer
-    initUI();
-    
-    // Initialize Radar System (async fetch)
-    fetchRadarSites();
-    
-    // Load Live Alerts
-    loadLiveAlerts();
 }
 
 async function fetchRadarSites() {
