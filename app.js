@@ -82,6 +82,32 @@ function initMap() {
 
     loadAllLayers();
     initUI();
+
+    // Auto-switch radar based on map center
+    map.on('moveend', findNearestRadar);
+}
+
+function findNearestRadar() {
+    // Only auto-switch if a radar is already active (user intent)
+    if (!activeRadarId) return;
+
+    const center = map.getCenter();
+    let minDistance = Infinity;
+    let nearestSite = null;
+
+    radarSites.forEach(site => {
+        // map.distance returns distance in meters
+        const dist = map.distance(center, [site.lat, site.lon]);
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearestSite = site;
+        }
+    });
+
+    if (nearestSite && nearestSite.id !== activeRadarId) {
+        console.log(`Auto-switching to nearest radar: ${nearestSite.id}`);
+        loadRadar(nearestSite.id);
+    }
 }
 
 function initUI() {
@@ -232,6 +258,10 @@ function loadRadar(siteId) {
         map.removeLayer(activeRadarLayer);
         activeRadarLayer = null;
         activeRadarId = null;
+        // Clear highlights
+        radarSitesLayer.eachLayer(marker => {
+            marker.getElement()?.classList.remove('active-radar');
+        });
         return;
     }
 
@@ -258,9 +288,16 @@ function loadRadar(siteId) {
     }).addTo(map);
 
     activeRadarId = siteId;
-    
-    // Maintain stacking: Radar > Outlooks, but Alerts > Radar
-    if (layerGroups['alerts']) layerGroups['alerts'].bringToFront();
+
+    // Update site labels to highlight active site
+    radarSitesLayer.eachLayer(marker => {
+        const id = marker.options.icon.options.html.match(/<span>(.*?)<\/span>/)[1];
+        if (id === siteId) {
+            marker.getElement()?.classList.add('active-radar');
+        } else {
+            marker.getElement()?.classList.remove('active-radar');
+        }
+    });
 }
 
 async function loadLiveAlerts() {
