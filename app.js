@@ -100,16 +100,20 @@ function initMap() {
     loadLiveAlerts();
 
     // Auto-switch radar will trigger once fetchRadarSites finishes
-
-    // Auto-switch radar based on map center
-    map.on('moveend', findNearestRadar);
-    
-    initUI();
+ 
+     // Auto-switch radar based on map center (Debounced to prevent Leaflet crashes)
+     let moveTimeout;
+     map.on('move', () => {
+         clearTimeout(moveTimeout);
+         moveTimeout = setTimeout(findNearestRadar, 250);
+     });
+     
+     initUI();
 
     // High-Frequency Radar Heartbeat (Every 30 seconds for life-safety precision)
     setInterval(() => {
         if (showRadar && activeRadarId) {
-            loadRadar(activeRadarId);
+            loadRadar(activeRadarId, true);
         }
     }, 30000); 
 }
@@ -474,15 +478,28 @@ function initRadar() {
     });
 }
 
-function loadRadar(stationId) {
+let pendingRadarLayer = null;
+
+function loadRadar(stationId, isHeartbeat = false) {
     if (!showRadar) return;
 
     const station = stationId.toLowerCase();
     const layerName = `${station}_${currentRadarProduct}`;
     const timestamp = Date.now();
     
-    // Create the new layer in the background to avoid flicker
-    const newRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows`, {
+    // Skip if already loading or showing this exact data (unless it's a heartbeat refresh)
+    if (!isHeartbeat && activeRadarId === stationId && activeRadarLayer?.options?.layers === layerName) {
+        return;
+    }
+
+    // Cancel any previous pending load to prevent Leaflet _fadeAnimated errors
+    if (pendingRadarLayer) {
+        map.removeLayer(pendingRadarLayer);
+        pendingRadarLayer = null;
+    }
+    
+    // Create the new layer in the background
+    pendingRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows`, {
         layers: layerName,
         format: 'image/png',
         transparent: true,
@@ -490,16 +507,18 @@ function loadRadar(stationId) {
         pane: 'radarPane',
         opacity: 0.8,
         attribution: 'NOAA/NWS',
-        _cb: timestamp // Force absolute latest from server
+        _cb: timestamp
     });
 
-    // Swap logic: wait for the new layer to load before removing the old one
-    newRadarLayer.on('load', () => {
+    pendingRadarLayer.on('load', function() {
+        if (this !== pendingRadarLayer) return; // Stale request
+
         if (activeRadarLayer) {
             map.removeLayer(activeRadarLayer);
         }
-        activeRadarLayer = newRadarLayer;
+        activeRadarLayer = this;
         activeRadarId = stationId;
+        pendingRadarLayer = null;
         
         console.log(`Radar synced: ${stationId} (${currentRadarProduct}) @ ${new Date().toLocaleTimeString()}`);
         
