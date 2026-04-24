@@ -264,6 +264,62 @@ async function switchOutlook(layerInfo) {
     }
 }
 
+function updateLegend(layerInfo) {
+    const legendItems = document.getElementById('legend-items');
+    const legendTitle = document.getElementById('legend-title');
+    if (!legendItems) return;
+    
+    legendItems.innerHTML = '';
+    legendTitle.textContent = layerInfo.name;
+
+    const categories = layerInfo.key.includes('cat') 
+        ? ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH']
+        : ['0.02', '0.05', '0.10', '0.15', '15%', '30%', '45%', '60%'];
+
+    categories.forEach(cat => {
+        const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
+        const item = document.createElement('div');
+        item.className = 'flex items-center gap-2';
+        item.innerHTML = `
+            <div class="w-3 h-3 rounded" style="background-color: ${color}"></div>
+            <span class="text-[10px] text-slate-400 font-medium">${cat}</span>
+        `;
+        legendItems.appendChild(item);
+    });
+}
+
+function getAlertStyle(feature) {
+    const event = feature.properties.event;
+    let color = '#3b82f6'; // Default blue
+    
+    if (event.includes('Tornado Warning')) color = '#ff0000';
+    else if (event.includes('Tornado Watch')) color = '#ffff00';
+    else if (event.includes('Severe Thunderstorm Warning')) color = '#ffa500';
+    else if (event.includes('Severe Thunderstorm Watch')) color = '#db7093';
+    
+    return {
+        fillColor: color,
+        weight: 2,
+        opacity: 1,
+        color: color,
+        fillOpacity: 0.3
+    };
+}
+
+function onEachAlert(feature, layer) {
+    const props = feature.properties;
+    const popupContent = `
+        <div class="p-1">
+            <h3 class="font-bold text-slate-900">${props.event}</h3>
+            <p class="text-xs text-slate-600 mt-1">${props.headline || 'Active Warning'}</p>
+            <div class="mt-2 text-[10px] text-slate-400">
+                Expires: ${new Date(props.expires).toLocaleTimeString()}
+            </div>
+        </div>
+    `;
+    layer.bindPopup(popupContent);
+}
+
 
 
 
