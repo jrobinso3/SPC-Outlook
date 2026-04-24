@@ -52,6 +52,12 @@ let map;
 let activeLayer;
 const layerGroups = {};
 
+// Radar state variables
+let radarSites = [];
+let radarSitesLayer;
+let activeRadarLayer;
+let activeRadarId = null;
+
 function initMap() {
     map = L.map('map', {
         zoomControl: false
@@ -203,8 +209,6 @@ async function loadAllLayers() {
     // Load Live Alerts
     loadLiveAlerts();
 }
-
-let radarSites = [];
 
 async function fetchRadarSites() {
     try {
