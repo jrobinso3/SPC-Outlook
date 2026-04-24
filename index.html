@@ -17,8 +17,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <style type="text/tailwindcss">
-        @theme {
+    <style>
+        :root {
             --font-outfit: "Outfit", sans-serif;
             --color-spc-tstm: #c1e9aa;
             --color-spc-mrgl: #008b00;
@@ -30,126 +30,206 @@
         }
 
         body {
-            @apply font-outfit bg-[#0b0e14] text-[#f1f5f9] h-screen flex flex-col overflow-hidden select-none;
+            font-family: var(--font-outfit);
+            background-color: #0b0e14;
+            color: #f1f5f9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
         }
 
         .glass-panel {
-            @apply bg-panel-bg backdrop-blur-2xl border border-white/10 shadow-2xl;
+            background-color: var(--color-panel-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         header {
-            @apply z-[5000];
+            z-index: 5000;
         }
 
         /* Discussion Side Panel */
         #side-panel {
-            @apply top-[62px] sm:top-24 right-[-100%] sm:right-[-400px] w-full sm:w-[420px] h-[calc(100%-62px)] sm:h-[calc(100%-112px)] sm:rounded-l-2xl z-[2000] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col overflow-hidden;
+            top: 62px;
+            right: -100%;
+            width: 100%;
+            height: calc(100% - 62px);
+            z-index: 2000;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
+            #side-panel {
+                top: 96px;
+                right: -400px;
+                width: 420px;
+                height: calc(100% - 112px);
+                border-top-left-radius: 1rem;
+                border-bottom-left-radius: 1rem;
+            }
         }
 
         #side-panel.active {
-            @apply right-0;
+            right: 0;
         }
 
         #discussion-body pre {
-            @apply whitespace-pre-wrap break-words font-outfit text-[14px] sm:text-[15px] leading-relaxed text-slate-200 tracking-wide;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: var(--font-outfit);
+            font-size: 14px;
+            line-height: 1.625;
+            color: #e2e8f0;
+            letter-spacing: 0.025em;
+        }
+
+        @media (min-width: 640px) {
+            #discussion-body pre {
+                font-size: 15px;
+            }
         }
 
         #legend-container.active {
-            @apply translate-y-0 opacity-100 scale-100;
+            transform: translateY(0) scale(1);
+            opacity: 1;
         }
 
         /* Toggle Switches */
         .toggle-switch {
-            @apply relative inline-block w-8 h-[18px];
+            position: relative;
+            display: inline-block;
+            width: 2rem;
+            height: 18px;
         }
 
         .toggle-switch input {
-            @apply opacity-0 w-0 h-0;
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
 
         .slider {
-            @apply absolute cursor-pointer inset-0 bg-white/10 transition-all duration-300 rounded-full;
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            border-radius: 9999px;
         }
 
         .slider:before {
-            @apply absolute content-[''] h-3 w-3 left-[3px] bottom-[3px] bg-white transition-all duration-300 rounded-full;
+            position: absolute;
+            content: '';
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: all 0.3s;
+            border-radius: 9999px;
         }
 
         input:checked + .slider {
-            @apply bg-blue-500;
+            background-color: #3b82f6;
         }
 
         input:checked + .slider:before {
-            @apply translate-x-[14px];
+            transform: translateX(14px);
         }
 
         /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
-            @apply w-1;
+            width: 0.25rem;
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-            @apply bg-transparent;
+            background: transparent;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            @apply bg-white/10 rounded-full hover:bg-white/20;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
         .radar-product-btn {
-            @apply text-slate-500 hover:text-white transition-all cursor-pointer;
+            color: #64748b;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .radar-product-btn:hover {
+            color: white;
         }
 
         .radar-product-btn.active {
-            @apply bg-blue-500/20 text-blue-400 shadow-[inset_0_0_10px_rgba(59,130,246,0.1)];
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.1);
         }
 
         #layer-menu.active {
-            @apply opacity-100 scale-100 visible translate-y-0;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            visibility: visible;
         }
 
-        /* Leaflet Overrides */
+        /* Map and UI layout */
+        #map {
+            height: 100vh;
+            width: 100vw;
+            background: #0b0e14;
+        }
 
         .leaflet-container {
-            @apply !bg-[#0b0e14];
+            background: #0b0e14 !important;
+            font-family: var(--font-outfit) !important;
         }
 
-        /* Hide default Leaflet layer control since we're using a custom menu */
-        .leaflet-control-layers {
-            @apply !hidden;
+        /* Legend Gradient Styles */
+        .legend-gradient {
+            background: linear-gradient(to right, 
+                var(--color-spc-tstm), 
+                var(--color-spc-mrgl), 
+                var(--color-spc-slgt), 
+                var(--color-spc-enh), 
+                var(--color-spc-mdt), 
+                var(--color-spc-high)
+            );
         }
 
-        .leaflet-control-layers-list {
-            @apply !font-outfit !text-sm;
-        }
-
-
+        /* Custom Popup Styles */
         .leaflet-popup-content-wrapper {
-            @apply !bg-panel-bg !backdrop-blur-xl !text-[#f1f5f9] !rounded-xl !border !border-white/10 !shadow-2xl;
+            background: rgba(20, 24, 33, 0.95) !important;
+            backdrop-filter: blur(12px);
+            color: white !important;
+            border-radius: 12px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .leaflet-popup-tip {
-            @apply !bg-panel-bg;
-        }
-
-        .leaflet-control-zoom {
-            @apply !border-none !shadow-2xl !mr-4;
-        }
-
-        .leaflet-control-zoom-in, .leaflet-control-zoom-out {
-            @apply !bg-panel-bg !backdrop-blur-xl !text-white !border-white/10 !rounded-xl !mb-1;
-        }
-
-        /* Confirmed Tornado Animation */
-        @keyframes tor-pulse {
-            0% { stroke-width: 4; stroke-opacity: 1; }
-            50% { stroke-width: 10; stroke-opacity: 1; }
-            100% { stroke-width: 4; stroke-opacity: 1; }
+            background: rgba(20, 24, 33, 0.95) !important;
         }
 
         .confirmed-tor {
             animation: tor-pulse 1.2s infinite ease-in-out;
             stroke-dasharray: 10, 5;
+        }
+
+        @keyframes tor-pulse {
+            0% { stroke-width: 3; opacity: 1; }
+            50% { stroke-width: 6; opacity: 0.7; }
+            100% { stroke-width: 3; opacity: 1; }
         }
 
         /* Radar Site Label Styling */
@@ -159,7 +239,22 @@
         }
 
         .radar-site-label span {
-            @apply bg-black/60 backdrop-blur-md text-white/40 text-[9px] font-bold px-1.5 py-0.5 rounded-md border border-white/10 transition-all cursor-pointer hover:text-white hover:bg-blue-500/80 hover:border-blue-400;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .radar-site-label span:hover {
+            color: white;
+            background-color: rgba(59, 130, 246, 0.8);
+            border-color: #60a5fa;
         }
     </style>
 </head>
