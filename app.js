@@ -66,10 +66,51 @@ let radarSitesLayer;
 let activeRadarLayer;
 let activeRadarId = null;
 
+// Persistence Logic
+function saveAppState() {
+    if (!map) return;
+    const state = {
+        center: map.getCenter(),
+        zoom: map.getZoom(),
+        showRadar,
+        showAlerts,
+        showOutlooks,
+        currentOutlookKey,
+        currentRadarProduct,
+        activeRadarId
+    };
+    localStorage.setItem('spc_dashboard_state', JSON.stringify(state));
+}
+
+function loadAppState() {
+    try {
+        const saved = localStorage.getItem('spc_dashboard_state');
+        return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+        console.error('Error loading saved state:', e);
+        return null;
+    }
+}
+
 function initMap() {
+    const savedState = loadAppState();
+    
+    // Apply saved state to global variables
+    if (savedState) {
+        showRadar = savedState.showRadar ?? true;
+        showAlerts = savedState.showAlerts ?? true;
+        showOutlooks = savedState.showOutlooks ?? true;
+        currentOutlookKey = savedState.currentOutlookKey || 'day1cat';
+        currentRadarProduct = savedState.currentRadarProduct || 'sr_bref';
+        activeRadarId = savedState.activeRadarId || null;
+    }
+
+    const startCenter = savedState?.center || CONFIG.mapCenter;
+    const startZoom = savedState?.zoom || CONFIG.initialZoom;
+
     map = L.map('map', {
         zoomControl: false
-    }).setView(CONFIG.mapCenter, CONFIG.initialZoom);
+    }).setView(startCenter, startZoom);
 
     // Create custom panes for robust layer stacking
     // Order: Outlooks (350) < Radar (450) < Alerts (550)
@@ -105,7 +146,10 @@ function initMap() {
      let moveTimeout;
      map.on('move', () => {
          clearTimeout(moveTimeout);
-         moveTimeout = setTimeout(findNearestRadar, 250);
+         moveTimeout = setTimeout(() => {
+             findNearestRadar();
+             saveAppState(); // Persist map position
+         }, 250);
      });
      
      initUI();
@@ -161,52 +205,64 @@ function initUI() {
     const toggleRadarLayer = document.getElementById('toggle-radar-layer');
     const toggleOutlooks = document.getElementById('toggle-outlooks');
 
+    // Sync Toggles with loaded state
+    if (toggleAlerts) toggleAlerts.checked = showAlerts;
+    if (toggleRadarLayer) toggleRadarLayer.checked = showRadar;
+    if (toggleOutlooks) toggleOutlooks.checked = showOutlooks;
+
     // Populate initial outlooks list
     renderOutlookList();
 
-    toggleAlerts.addEventListener('change', (e) => {
+    toggleAlerts?.addEventListener('change', (e) => {
         showAlerts = e.target.checked;
-        if (layerGroups['alerts']) {
-            if (showAlerts) layerGroups['alerts'].addTo(map);
-            else map.removeLayer(layerGroups['alerts']);
-        }
+        if (showAlerts) loadLiveAlerts();
+        else if (activeAlertsLayer) map.removeLayer(activeAlertsLayer);
+        saveAppState();
     });
 
-    toggleRadarLayer.addEventListener('change', (e) => {
+    toggleRadarLayer?.addEventListener('change', (e) => {
         showRadar = e.target.checked;
-        if (activeRadarLayer) {
-            if (showRadar) activeRadarLayer.addTo(map);
-            else map.removeLayer(activeRadarLayer);
-        } else if (showRadar) {
-            findNearestRadar();
+        if (showRadar) {
+            if (activeRadarId) loadRadar(activeRadarId);
+            else findNearestRadar(true);
+        } else if (activeRadarLayer) {
+            map.removeLayer(activeRadarLayer);
         }
+        saveAppState();
     });
 
-    toggleOutlooks.addEventListener('change', (e) => {
+    toggleOutlooks?.addEventListener('change', (e) => {
         showOutlooks = e.target.checked;
-        if (activeLayer) {
-            if (showOutlooks) activeLayer.addTo(map);
-            else map.removeLayer(activeLayer);
+        if (showOutlooks) {
+            const currentLayer = CONFIG.layers.find(l => l.key === currentOutlookKey);
+            if (currentLayer) switchOutlook(currentLayer);
+        } else if (activeLayer) {
+            map.removeLayer(activeLayer);
         }
-        renderOutlookList();
+        saveAppState();
     });
 
     // Radar Product Selection
     const productBtns = document.querySelectorAll('.radar-product-btn');
     productBtns.forEach(btn => {
+        // Set initial active state
+        if (btn.dataset.product === currentRadarProduct) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+
         btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent menu from closing
-            
+            e.stopPropagation();
             if (btn.classList.contains('active')) return;
 
             productBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentRadarProduct = btn.dataset.product;
             
-            console.log(`Switching radar product to: ${currentRadarProduct}`);
+            saveAppState();
             
             if (activeRadarId && showRadar) {
-                // Force a full reload of the radar station with the new product
                 loadRadar(activeRadarId);
             }
         });
