@@ -105,6 +105,14 @@ function initMap() {
     map.on('moveend', findNearestRadar);
     
     initUI();
+
+    // Auto-refresh radar every 2 minutes to stay synchronized with live NWS data
+    setInterval(() => {
+        if (showRadar && activeRadarId) {
+            console.log(`Auto-refreshing live radar for: ${activeRadarId}`);
+            loadRadar(activeRadarId);
+        }
+    }, 120000); 
 }
 
 function findNearestRadar(force = false) {
