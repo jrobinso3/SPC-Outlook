@@ -142,6 +142,19 @@ function initUI() {
             layerMenu.classList.remove('active');
         }
     });
+
+    const toggleRadarBtn = document.getElementById('toggle-radar-sites');
+    const radarStatusDot = document.getElementById('radar-sites-status');
+    
+    toggleRadarBtn.addEventListener('click', () => {
+        if (map.hasLayer(radarSitesLayer)) {
+            map.removeLayer(radarSitesLayer);
+            radarStatusDot.classList.replace('bg-blue-500', 'bg-slate-500');
+        } else {
+            radarSitesLayer.addTo(map);
+            radarStatusDot.classList.replace('bg-slate-500', 'bg-blue-500');
+        }
+    });
 }
 
 
@@ -181,7 +194,10 @@ async function loadAllLayers() {
         }
     }
     
-    // Initialize Radar System (now async)
+    initRadar(); // Initialize empty layer
+    initUI();
+    
+    // Initialize Radar System (async fetch)
     fetchRadarSites();
     
     // Load Live Alerts
@@ -211,12 +227,13 @@ async function fetchRadarSites() {
     }
 }
 
-let radarSitesLayer;
-let activeRadarLayer;
-let activeRadarId = null;
-
 function initRadar() {
-    radarSitesLayer = L.layerGroup();
+    if (!radarSitesLayer) {
+        radarSitesLayer = L.layerGroup();
+    }
+    
+    // Clear any existing layers if called again
+    radarSitesLayer.clearLayers();
     
     radarSites.forEach(site => {
         const icon = L.divIcon({
@@ -230,19 +247,6 @@ function initRadar() {
         marker.on('click', () => loadRadar(site.id));
         marker.bindTooltip(`${site.id} - ${site.city}`, { direction: 'top', offset: [0, -10] });
         radarSitesLayer.addLayer(marker);
-    });
-
-    const toggleBtn = document.getElementById('toggle-radar-sites');
-    const statusDot = document.getElementById('radar-sites-status');
-    
-    toggleBtn.addEventListener('click', () => {
-        if (map.hasLayer(radarSitesLayer)) {
-            map.removeLayer(radarSitesLayer);
-            statusDot.classList.replace('bg-blue-500', 'bg-slate-500');
-        } else {
-            radarSitesLayer.addTo(map);
-            statusDot.classList.replace('bg-slate-500', 'bg-blue-500');
-        }
     });
 }
 
