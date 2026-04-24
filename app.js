@@ -48,9 +48,16 @@ const CONFIG = {
     }
 };
 
+// Global State
 let map;
 let activeLayer;
 const layerGroups = {};
+
+// Master visibility states
+let showRadar = true;
+let showAlerts = true;
+let showOutlooks = true;
+let currentOutlookKey = 'day1cat';
 
 // Radar state variables
 let radarSites = [];
@@ -86,16 +93,20 @@ function initMap() {
         maxZoom: 20
     }).addTo(map);
 
-    loadAllLayers();
-    initUI();
-    
     // Initialize core systems
     initRadar();
     fetchRadarSites();
     loadLiveAlerts();
 
+    // Auto-switch radar based on map center (Initial load)
+    setTimeout(() => {
+        if (showRadar) findNearestRadar();
+    }, 1000);
+
     // Auto-switch radar based on map center
     map.on('moveend', findNearestRadar);
+    
+    initUI();
 }
 
 function findNearestRadar() {
@@ -130,6 +141,41 @@ function initUI() {
     const layerMenu = document.getElementById('layer-menu');
     const layerBtn = document.getElementById('active-day-label');
     
+    // Toggles
+    const toggleAlerts = document.getElementById('toggle-alerts');
+    const toggleRadarLayer = document.getElementById('toggle-radar-layer');
+    const toggleOutlooks = document.getElementById('toggle-outlooks');
+
+    // Populate initial outlooks list
+    renderOutlookList();
+
+    toggleAlerts.addEventListener('change', (e) => {
+        showAlerts = e.target.checked;
+        if (layerGroups['alerts']) {
+            if (showAlerts) layerGroups['alerts'].addTo(map);
+            else map.removeLayer(layerGroups['alerts']);
+        }
+    });
+
+    toggleRadarLayer.addEventListener('change', (e) => {
+        showRadar = e.target.checked;
+        if (activeRadarLayer) {
+            if (showRadar) activeRadarLayer.addTo(map);
+            else map.removeLayer(activeRadarLayer);
+        } else if (showRadar) {
+            findNearestRadar();
+        }
+    });
+
+    toggleOutlooks.addEventListener('change', (e) => {
+        showOutlooks = e.target.checked;
+        if (activeLayer) {
+            if (showOutlooks) activeLayer.addTo(map);
+            else map.removeLayer(activeLayer);
+        }
+        renderOutlookList();
+    });
+
     closeBtn.addEventListener('click', () => {
         sidePanel.classList.remove('active');
     });
@@ -168,43 +214,60 @@ function initUI() {
     });
 }
 
-
-
-
-async function loadAllLayers() {
+async function renderOutlookList() {
     const layerOptions = document.getElementById('layer-options');
-    layerOptions.innerHTML = ''; // Clear loading state
+    layerOptions.innerHTML = '';
 
     for (const layerInfo of CONFIG.layers) {
-        try {
-            const data = await fetchGeoJSON(layerInfo.id);
-            const geoJsonLayer = L.geoJSON(data, {
-                style: getFeatureStyle,
-                pane: 'outlookPane',
-                onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
-            });
+        const btn = document.createElement('button');
+        btn.className = `flex items-center justify-between w-full p-2 rounded-xl text-left transition-all ${
+            currentOutlookKey === layerInfo.key ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-white/5 text-slate-300'
+        } ${!showOutlooks ? 'opacity-50 pointer-events-none' : ''}`;
+        
+        btn.innerHTML = `
+            <span class="text-sm font-medium">${layerInfo.name}</span>
+            ${currentOutlookKey === layerInfo.key ? '<div class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>' : ''}
+        `;
 
-            layerGroups[layerInfo.key] = geoJsonLayer;
-            
-            // Create menu item
-            const btn = document.createElement('button');
-            btn.className = 'text-left px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-colors hover:bg-white/5 cursor-pointer';
-            btn.textContent = layerInfo.name;
-            btn.onclick = () => switchLayer(layerInfo, geoJsonLayer);
-            layerOptions.appendChild(btn);
-
-            // Default to Day 1
-            if (layerInfo.key === 'day1cat') {
-                geoJsonLayer.addTo(map);
-                activeLayer = geoJsonLayer;
-                document.querySelector('#active-day-label span').textContent = layerInfo.name;
-            }
-
-        } catch (error) {
-            console.error(`Error loading layer ${layerInfo.name}:`, error);
-        }
+        btn.onclick = async () => {
+            if (!showOutlooks) return;
+            currentOutlookKey = layerInfo.key;
+            await switchOutlook(layerInfo);
+            renderOutlookList();
+        };
+        layerOptions.appendChild(btn);
+    }
+    
+    // Initial Load of default outlook if not already loaded
+    if (!activeLayer && showOutlooks) {
+        const defaultLayer = CONFIG.layers.find(l => l.key === 'day1cat');
+        if (defaultLayer) switchOutlook(defaultLayer);
     }
 }
+
+async function switchOutlook(layerInfo) {
+    if (activeLayer) map.removeLayer(activeLayer);
+    
+    try {
+        const data = await fetchGeoJSON(layerInfo.id);
+        activeLayer = L.geoJSON(data, {
+            style: getFeatureStyle,
+            pane: 'outlookPane',
+            onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
+        });
+
+        if (showOutlooks) activeLayer.addTo(map);
+        
+        updateLegend(layerInfo);
+    } catch (error) {
+        console.error(`Error switching outlook to ${layerInfo.name}:`, error);
+    }
+}
+
+
+
+
+
 
 async function fetchRadarSites() {
     try {

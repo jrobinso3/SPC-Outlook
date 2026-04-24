@@ -58,6 +58,44 @@
             @apply translate-y-0 opacity-100 scale-100;
         }
 
+        /* Toggle Switches */
+        .toggle-switch {
+            @apply relative inline-block w-8 h-[18px];
+        }
+
+        .toggle-switch input {
+            @apply opacity-0 w-0 h-0;
+        }
+
+        .slider {
+            @apply absolute cursor-pointer inset-0 bg-white/10 transition-all duration-300 rounded-full;
+        }
+
+        .slider:before {
+            @apply absolute content-[''] h-3 w-3 left-[3px] bottom-[3px] bg-white transition-all duration-300 rounded-full;
+        }
+
+        input:checked + .slider {
+            @apply bg-blue-500;
+        }
+
+        input:checked + .slider:before {
+            @apply translate-x-[14px];
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            @apply w-1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            @apply bg-transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            @apply bg-white/10 rounded-full hover:bg-white/20;
+        }
+
         #layer-menu.active {
             @apply opacity-100 scale-100 visible translate-y-0;
         }
@@ -129,19 +167,53 @@
             <!-- Custom Layer Menu -->
             <div class="relative">
                 <button id="active-day-label" class="bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-blue-500/30 whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer outline-none">
-                    <span>Loading data...</span>
+                    <span>Map Layers</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
-                <div id="layer-menu" class="glass-panel absolute right-0 top-full mt-3 w-56 rounded-2xl p-2 transition-all duration-200 opacity-0 scale-95 translate-y-[-10px] invisible shadow-3xl overflow-hidden z-[5001]">
-                    <div id="layer-options" class="flex flex-col gap-1">
-                        <!-- Options populated via JS -->
-                    </div>
-                    <div class="border-t border-white/5 my-1 mx-2"></div>
-                    <div class="p-1">
-                        <button id="toggle-radar-sites" class="w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm transition-colors hover:bg-white/5 cursor-pointer flex items-center justify-between group outline-none">
-                            <span class="text-slate-400 group-hover:text-white font-medium">Radar Site Labels</span>
-                            <div id="radar-sites-status" class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-colors"></div>
-                        </button>
+                <div id="layer-menu" class="glass-panel absolute right-0 top-full mt-3 w-64 rounded-2xl p-4 transition-all duration-200 opacity-0 scale-95 translate-y-[-10px] invisible shadow-3xl overflow-hidden z-[5001]">
+                    <div class="flex flex-col gap-4">
+                        <!-- Severe Weather Section -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Severe Weather</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-alerts" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <!-- Radar Section -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Radar</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-radar-layer" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <hr class="border-white/10">
+
+                        <!-- Outlooks Section -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">SPC Outlooks</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="toggle-outlooks" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div id="layer-options" class="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+
+                        <hr class="border-white/10">
+
+                        <div class="p-1">
+                            <button id="toggle-radar-sites" class="w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm transition-colors hover:bg-white/5 cursor-pointer flex items-center justify-between group outline-none">
+                                <span class="text-slate-400 group-hover:text-white font-medium">Radar Site Labels</span>
+                                <div id="radar-sites-status" class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-colors"></div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
