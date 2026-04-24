@@ -301,7 +301,12 @@ function getAlertStyle(feature) {
     if (event.includes('Tornado Warning')) {
         const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
         const isObserved = desc.includes('TORNADO...OBSERVED') || desc.includes('OBSERVED TORNADO');
-        const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || headline.includes('PDS') || desc.includes('PDS');
+        
+        // Exhaustive PDS search across all available text
+        const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
+                      headline.includes('PARTICULARLY DANGEROUS SITUATION') || 
+                      (props.instruction || '').toUpperCase().includes('PARTICULARLY DANGEROUS SITUATION') ||
+                      headline.includes('PDS') || desc.includes('PDS');
 
         if (isEmergency) {
             color = '#ff00ff'; 
@@ -344,8 +349,12 @@ function onEachAlert(feature, layer) {
     const desc = (props.description || '').toUpperCase();
     const headline = (props.headline || '').toUpperCase();
     
-    // Check for PDS/Emergency to add the special "Magenta Stripe" overlay
-    const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || headline.includes('PDS');
+    // Exhaustive PDS search for the overlay
+    const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
+                  headline.includes('PARTICULARLY DANGEROUS SITUATION') || 
+                  (props.instruction || '').toUpperCase().includes('PARTICULARLY DANGEROUS SITUATION') ||
+                  headline.includes('PDS');
+    
     const isEmergency = desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
 
     if (isPDS || isEmergency) {
