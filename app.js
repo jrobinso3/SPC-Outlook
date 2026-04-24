@@ -106,13 +106,12 @@ function initMap() {
     
     initUI();
 
-    // Auto-refresh radar every 2 minutes to stay synchronized with live NWS data
+    // High-Frequency Radar Heartbeat (Every 30 seconds for life-safety precision)
     setInterval(() => {
         if (showRadar && activeRadarId) {
-            console.log(`Auto-refreshing live radar for: ${activeRadarId}`);
             loadRadar(activeRadarId);
         }
-    }, 120000); 
+    }, 30000); 
 }
 
 function findNearestRadar(force = false) {
@@ -476,27 +475,14 @@ function initRadar() {
 }
 
 function loadRadar(stationId) {
-    if (activeRadarId === stationId) {
-        map.removeLayer(activeRadarLayer);
-        activeRadarLayer = null;
-        activeRadarId = null;
-        // Clear highlights
-        radarSitesLayer.eachLayer(marker => {
-            marker.getElement()?.classList.remove('active-radar');
-        });
-        return;
-    }
+    if (!showRadar) return;
 
-    if (activeRadarLayer) {
-        map.removeLayer(activeRadarLayer);
-    }
-
-    activeRadarId = stationId;
+    const station = stationId.toLowerCase();
+    const layerName = `${station}_${currentRadarProduct}`;
+    const timestamp = Date.now();
     
-    // Update the WMS layer based on the selected product
-    const layerName = `${stationId.toLowerCase()}_${currentRadarProduct}`;
-    
-    activeRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${stationId.toLowerCase()}/${layerName}/ows`, {
+    // Create the new layer in the background to avoid flicker
+    const newRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows`, {
         layers: layerName,
         format: 'image/png',
         transparent: true,
@@ -504,12 +490,30 @@ function loadRadar(stationId) {
         pane: 'radarPane',
         opacity: 0.8,
         attribution: 'NOAA/NWS',
-        _cb: Date.now() // Force refresh
+        _cb: timestamp // Force absolute latest from server
     });
 
-    activeRadarLayer.addTo(map);
+    // Swap logic: wait for the new layer to load before removing the old one
+    newRadarLayer.on('load', () => {
+        if (activeRadarLayer) {
+            map.removeLayer(activeRadarLayer);
+        }
+        activeRadarLayer = newRadarLayer;
+        activeRadarId = stationId;
+        
+        console.log(`Radar synced: ${stationId} (${currentRadarProduct}) @ ${new Date().toLocaleTimeString()}`);
+        
+        // Update UI indicator
+        const radarLabel = document.querySelector('.radar-site-label.active-radar');
+        if (radarLabel) {
+            radarLabel.classList.add('synced');
+            setTimeout(() => radarLabel.classList.remove('synced'), 1000);
+        }
+    });
+
+    newRadarLayer.addTo(map);
     
-    // Highlight the active station in the sites layer if it exists
+    // Highlight active station logic remains the same
     if (radarSitesLayer) {
         radarSitesLayer.eachLayer(marker => {
             if (marker.options.stationId === stationId) {
