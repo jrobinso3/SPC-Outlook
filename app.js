@@ -309,14 +309,32 @@ function updateLegend(layerInfo) {
     categories.forEach(cat => {
         const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
         const item = document.createElement('div');
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.gap = '8px';
-        item.style.marginBottom = '4px';
+        
+        // Forced container styling
+        item.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        `;
 
         item.innerHTML = `
-            <div style="width: 12px; height: 12px; border-radius: 3px; background-color: ${color}; border: 1px solid rgba(255,255,255,0.1);"></div>
-            <span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${cat}</span>
+            <div style="
+                width: 14px; 
+                height: 14px; 
+                background-color: ${color} !important; 
+                border: 1.5px solid rgba(255,255,255,0.2); 
+                border-radius: 3px;
+                flex-shrink: 0;
+                box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            "></div>
+            <span style="
+                font-size: 11px; 
+                color: #f1f5f9; 
+                font-weight: 600; 
+                text-transform: uppercase; 
+                letter-spacing: 0.025em;
+            ">${cat}</span>
         `;
         legendItems.appendChild(item);
     });
