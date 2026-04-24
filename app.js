@@ -59,6 +59,7 @@ let showAlerts = true;
 let showOutlooks = true;
 let currentOutlookKey = 'day1cat';
 let currentRadarProduct = 'sr_bref';
+let activeAlertsLayer;
 
 // Radar state variables
 let radarSites = [];
@@ -630,10 +631,11 @@ function loadRadar(stationId, isHeartbeat = false) {
 async function loadLiveAlerts() {
     try {
         const events = ['Tornado Warning', 'Tornado Watch', 'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch'];
-        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}&_cb=${Date.now()}`;
+        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}`;
         
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' }
+            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' },
+            cache: 'no-store'
         });
         
         if (!response.ok) throw new Error('Alerts fetch failed');
