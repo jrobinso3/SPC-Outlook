@@ -487,12 +487,14 @@ function onEachAlert(feature, layer) {
     
     const parameters = props.parameters || {};
     const tornadoThreat = (parameters.tornadoDamageThreat || [''])[0].toUpperCase();
-    
-    // Exhaustive PDS search: scan description, headline, instruction, and technical parameters
-    const isPDS = desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
-                  headline.includes('PARTICULARLY DANGEROUS SITUATION') || 
-                  (props.instruction || '').toUpperCase().includes('PARTICULARLY DANGEROUS SITUATION') ||
-                  headline.includes('PDS') ||
+    const isTornadoWarning = props.event === 'Tornado Warning';
+    const hasDangerous = desc.includes('DANGEROUS') || 
+                         headline.includes('DANGEROUS') || 
+                         (props.instruction || '').toUpperCase().includes('DANGEROUS');
+
+    // Simplified Rule: If it's a Tornado Warning and mentions "DANGEROUS", upgrade styling.
+    const isPDS = (isTornadoWarning && hasDangerous) ||
+                  desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
                   tornadoThreat === 'CONSIDERABLE' ||
                   tornadoThreat === 'DESTRUCTIVE';
     
