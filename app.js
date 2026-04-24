@@ -308,9 +308,9 @@ function updateLegend(layerInfo) {
 
     categories.forEach(cat => {
         const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
+        const colorClass = cat.match(/^[A-Z]+$/) ? `bg-spc-${cat.toLowerCase()}` : '';
         const item = document.createElement('div');
         
-        // Forced container styling
         item.style.cssText = `
             display: flex;
             align-items: center;
@@ -319,14 +319,13 @@ function updateLegend(layerInfo) {
         `;
 
         item.innerHTML = `
-            <div style="
+            <div class="${colorClass}" style="
                 width: 14px; 
                 height: 14px; 
-                background-color: ${color} !important; 
+                ${!colorClass ? `background-color: ${color} !important;` : ''}
                 border: 1.5px solid rgba(255,255,255,0.2); 
                 border-radius: 3px;
                 flex-shrink: 0;
-                box-shadow: 0 0 5px rgba(0,0,0,0.3);
             "></div>
             <span style="
                 font-size: 11px; 
