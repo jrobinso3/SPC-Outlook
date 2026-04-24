@@ -450,7 +450,10 @@ function initRadar() {
             iconAnchor: [20, 10]
         });
         
-        const marker = L.marker([site.lat, site.lon], { icon: icon });
+        const marker = L.marker([site.lat, site.lon], { 
+            icon: icon,
+            stationId: site.id 
+        });
         marker.on('click', () => loadRadar(site.id));
         marker.bindTooltip(`${site.id} - ${site.city}`, { direction: 'top', offset: [0, -10] });
         radarSitesLayer.addLayer(marker);
@@ -492,11 +495,11 @@ function loadRadar(stationId) {
     
     // Highlight the active station in the sites layer if it exists
     if (radarSitesLayer) {
-        radarSitesLayer.eachLayer(layer => {
-            if (layer.options && layer.options.stationId === stationId) {
-                layer.setStyle({ color: '#3b82f6', weight: 3, radius: 8 });
+        radarSitesLayer.eachLayer(marker => {
+            if (marker.options.stationId === stationId) {
+                marker.getElement()?.classList.add('active-radar');
             } else {
-                layer.setStyle({ color: '#64748b', weight: 1, radius: 4 });
+                marker.getElement()?.classList.remove('active-radar');
             }
         });
     }
