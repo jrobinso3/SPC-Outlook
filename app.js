@@ -147,12 +147,16 @@ function initMap() {
         pane: 'labelsPane'
     }).addTo(map);
 
-    // Major Roads overlay (Top)
+    // Major Roads overlay (Top) - Softened for better integration
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
         pane: 'labelsPane',
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
-        maxZoom: 20
+        maxZoom: 20,
+        opacity: 0.5
     }).addTo(map);
+
+    // Apply subtle styling to the labels pane via CSS to make it less dominant
+    map.getPane('labelsPane').style.filter = 'brightness(0.8) contrast(1.1)';
 
     // Initialize core systems
     initRadar();
