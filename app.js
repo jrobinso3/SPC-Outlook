@@ -230,8 +230,9 @@ function loadRadar(siteId) {
     // Convert 4-letter ICAO (e.g., KTOP) to 3-letter NEXRAD ID (e.g., TOP) for IEM
     const iemSiteId = siteId.startsWith('K') ? siteId.substring(1) : siteId;
 
-    // IEM TMS format requires [RADAR]-[PRODUCT]-[TIME]
-    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemSiteId.toUpperCase()}-N0Q-0/{z}/{x}/{y}.png`;
+    // Bust the browser cache every 2 minutes so radar returns stay live
+    const cacheBuster = Math.floor(Date.now() / 120000);
+    const tmsUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemSiteId.toUpperCase()}-N0Q-0/{z}/{x}/{y}.png?_=${cacheBuster}`;
     
     activeRadarLayer = L.tileLayer(tmsUrl, {
         opacity: 0.8,
