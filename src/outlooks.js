@@ -7,19 +7,48 @@ export async function switchOutlook(layerInfo) {
     if (state.activeLayer) state.map.removeLayer(state.activeLayer);
     
     try {
-        const url = `${CONFIG.apiBase}/${layerInfo.id}/query?where=1%3D1&outFields=*&f=geojson`;
-        const data = await fetchGeoJSON(url);
+        // Create a group to hold both Prob and SIG (hatching) layers
+        const outlookGroup = L.layerGroup();
         
-        state.activeLayer = L.geoJSON(data, {
+        // 1. Fetch main probabilistic/categorical data
+        const probUrl = `${CONFIG.apiBase}/${layerInfo.id}/query?where=1%3D1&outFields=*&f=geojson`;
+        const probData = await fetchGeoJSON(probUrl);
+        
+        const probLayer = L.geoJSON(probData, {
             style: getFeatureStyle,
             pane: 'outlookPane',
             onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
         });
+        outlookGroup.addLayer(probLayer);
 
         state.activeOutlookCategories = [...new Set(
-            data.features.map(f => (f.properties.label || f.properties.LABEL || '').toUpperCase()).filter(Boolean)
+            probData.features.map(f => (f.properties.label || f.properties.LABEL || '').toUpperCase()).filter(Boolean)
         )];
 
+        // 2. Fetch SIG (Intensity/Hatching) data if applicable
+        if (layerInfo.sigLayerId) {
+            try {
+                const sigUrl = `${CONFIG.apiBase}/${layerInfo.sigLayerId}/query?where=label+IN+('CIG1','CIG2','CIG3')&outFields=*&f=geojson`;
+                const sigData = await fetchGeoJSON(sigUrl);
+                
+                if (sigData.features.length > 0) {
+                    const sigLayer = L.geoJSON(sigData, {
+                        style: getSigStyle,
+                        pane: 'outlookPane',
+                        interactive: false // Let the prob layer handle interactions
+                    });
+                    outlookGroup.addLayer(sigLayer);
+                    
+                    // Add SIG levels to active categories for legend
+                    const sigCats = sigData.features.map(f => f.properties.label || f.properties.LABEL).filter(Boolean);
+                    state.activeOutlookCategories.push(...sigCats);
+                }
+            } catch (e) {
+                console.warn(`Sig layer fetch failed for ${layerInfo.name}:`, e);
+            }
+        }
+
+        state.activeLayer = outlookGroup;
         if (state.showOutlooks) state.activeLayer.addTo(state.map);
 
         updateMapLegend();
@@ -39,6 +68,26 @@ function getFeatureStyle(feature) {
         opacity: 1,
         color: color,
         fillOpacity: 0.35
+    };
+}
+
+function getSigStyle(feature) {
+    const props = feature.properties;
+    const label = (props.label || props.LABEL || '').toUpperCase();
+    
+    // Map CIG labels to our SVG patterns
+    const patternMap = {
+        'CIG1': 'url(#pattern-cig1)',
+        'CIG2': 'url(#pattern-cig2)',
+        'CIG3': 'url(#pattern-cig3)'
+    };
+
+    return {
+        fillColor: patternMap[label] || 'transparent',
+        fillOpacity: 1,
+        weight: 0,
+        color: 'transparent',
+        interactive: false
     };
 }
 
@@ -88,6 +137,8 @@ function onEachFeature(feature, layer, layerInfo) {
 async function showDiscussion(type, baseDateStr) {
     const sidePanel = document.getElementById('side-panel');
     const body = document.getElementById('discussion-body');
+    
+    if (!sidePanel || !body) return;
     
     sidePanel.classList.add('active');
     body.innerHTML = '<div class="flex items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>';

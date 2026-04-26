@@ -287,6 +287,22 @@
     </style>
 </head>
 <body class="bg-[#0b0e14]">
+    <!-- Global SVG Patterns for Outlook Hatching -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="pattern-cig1" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="10" style="stroke:rgba(255,255,255,0.4); stroke-width:1" />
+            </pattern>
+            <pattern id="pattern-cig2" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="6" style="stroke:rgba(255,255,255,0.6); stroke-width:1.5" />
+            </pattern>
+            <pattern id="pattern-cig3" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="8" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
+                <line x1="0" y1="0" x2="8" y2="0" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
+            </pattern>
+        </defs>
+    </svg>
+
     <header class="fixed top-0 left-0 right-0 h-16 sm:h-20 bg-[#0b0e14]/90 backdrop-blur-md border-b border-white/5 z-[5000]">
         <div class="max-w-7xl mx-auto h-full px-4 sm:px-8 flex justify-between items-center">
             <h1 class="text-lg sm:text-2xl font-semibold tracking-tight">Severe Weather <span class="text-blue-500">Outlook</span></h1>
@@ -352,7 +368,7 @@
                                     <span class="slider"></span>
                                 </label>
                             </div>
-                            <div id="layer-options" class="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            <div id="layer-options" class="flex flex-col gap-1 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
                                 <!-- Populated via JS -->
                             </div>
                         </div>

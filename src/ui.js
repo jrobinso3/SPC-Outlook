@@ -149,25 +149,53 @@ export function initUIListeners() {
 
 export async function renderOutlookList() {
     const layerOptions = document.getElementById('layer-options');
+    if (!layerOptions) return;
     layerOptions.innerHTML = '';
 
-    for (const layerInfo of CONFIG.layers) {
-        const btn = document.createElement('button');
-        btn.className = `flex items-center justify-between w-full p-2 rounded-xl text-left transition-all ${
-            state.currentOutlookKey === layerInfo.key ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-white/5 text-slate-300'
-        } ${!state.showOutlooks ? 'opacity-50 pointer-events-none' : ''}`;
-        
-        btn.innerHTML = `
-            <span class="text-sm font-medium">${layerInfo.name}</span>
-            ${state.currentOutlookKey === layerInfo.key ? '<div class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>' : ''}
-        `;
+    const groups = {
+        'Day 1': CONFIG.layers.filter(l => l.key.startsWith('day1')),
+        'Day 2': CONFIG.layers.filter(l => l.key.startsWith('day2')),
+        'Day 3': CONFIG.layers.filter(l => l.key.startsWith('day3')),
+        'Extended': CONFIG.layers.filter(l => l.key.startsWith('day4') || l.key.startsWith('day5'))
+    };
 
-        btn.onclick = async () => {
-            if (!state.showOutlooks) return;
-            state.currentOutlookKey = layerInfo.key;
-            await switchOutlook(layerInfo);
-            renderOutlookList();
-        };
-        layerOptions.appendChild(btn);
+    for (const [groupName, layers] of Object.entries(groups)) {
+        if (layers.length === 0) continue;
+
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'text-[9px] font-bold text-blue-500/50 uppercase tracking-widest mt-3 mb-1 first:mt-0 px-2';
+        groupHeader.textContent = groupName;
+        layerOptions.appendChild(groupHeader);
+
+        for (const layerInfo of layers) {
+            const btn = document.createElement('button');
+            const isActive = state.currentOutlookKey === layerInfo.key;
+            
+            btn.className = `flex items-center justify-between w-full px-3 py-2 rounded-xl text-left transition-all outline-none ${
+                isActive ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'hover:bg-white/5 text-slate-300 border border-transparent'
+            } ${!state.showOutlooks ? 'opacity-50 pointer-events-none' : ''}`;
+            
+            // Clean up name (remove Day X prefix for inner list)
+            const displayName = layerInfo.name.replace(/Day \d+ /i, '');
+
+            btn.innerHTML = `
+                <span class="text-xs font-medium">${displayName}</span>
+                ${isActive ? '<div class="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>' : ''}
+            `;
+
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!state.showOutlooks || isActive) return;
+                
+                state.currentOutlookKey = layerInfo.key;
+                await switchOutlook(layerInfo);
+                renderOutlookList();
+                
+                // Close menu after selection
+                const layerMenu = document.getElementById('layer-menu');
+                layerMenu?.classList.remove('active');
+            });
+            layerOptions.appendChild(btn);
+        }
     }
 }

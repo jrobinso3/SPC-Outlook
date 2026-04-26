@@ -88,6 +88,12 @@ export async function loadLiveAlerts() {
     }
 }
 
+// AI AGENT INSTRUCTION: DO NOT MODIFY `loadWatchPolygons` QUERY PARAMS OR DATA PARSING LOGIC.
+// NWS API (/alerts/active) often omits geometries for large watches (providing only affectedZones).
+// We rely on the ArcGIS FeatureServer (CONFIG.watchPolygonsApi) because it provides polygon geometries 
+// ALONG with the critical `Event` and `Description` schema.
+// Turf.union is strictly required here to cleanly dissolve the fragmented county-level sub-features 
+// into a unified SPC Watch polygon before rendering on Leaflet.
 async function loadWatchPolygons() {
     const where = encodeURIComponent("Event LIKE '%Thunderstorm Watch%' OR Event LIKE '%Tornado Watch%'");
     const url = `${CONFIG.watchPolygonsApi}/query?where=${where}&outFields=Event,Summary,End_,Description,Instruction&f=geojson`;
@@ -95,6 +101,8 @@ async function loadWatchPolygons() {
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error('Watch polygon fetch failed');
     const data = await response.json();
+
+    if (!data.features) return { type: 'FeatureCollection', features: [] };
 
     // Group sub-features by SPC watch number so each watch renders as one entity
     const watchGroups = {};
@@ -118,7 +126,7 @@ async function loadWatchPolygons() {
 
         // Dissolve sub-features into one shape, removing shared internal edges
         const dissolved = turf.union(turf.featureCollection(features));
-        const geometry = dissolved.geometry;
+        const geometry = dissolved ? dissolved.geometry : representative.geometry;
 
         return {
             type: 'Feature',

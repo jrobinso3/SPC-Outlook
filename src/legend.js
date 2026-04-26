@@ -48,6 +48,18 @@ function appendOutlookLegend(container, layerInfo) {
         const item = createLegendItem(cat, color, colorClass);
         container.appendChild(item);
     });
+
+    // 2. Handle Intensity (SIG) levels
+    const sigLevels = [
+        { key: 'CIG1', label: 'SIG Level 1', pattern: 'url(#pattern-cig1)' },
+        { key: 'CIG2', label: 'SIG Level 2', pattern: 'url(#pattern-cig2)' },
+        { key: 'CIG3', label: 'SIG Level 3', pattern: 'url(#pattern-cig3)' }
+    ];
+
+    sigLevels.filter(sig => active.includes(sig.key)).forEach(sig => {
+        const item = createLegendItem(sig.label, sig.pattern, '', false, null, true);
+        container.appendChild(item);
+    });
 }
 
 function appendAlertLegend(container) {
@@ -96,14 +108,14 @@ function appendAlertLegend(container) {
     });
 }
 
-function createLegendItem(label, color, colorClass, isPDS = false, count = null) {
+function createLegendItem(label, color, colorClass, isPDS = false, count = null, isPattern = false) {
     const item = document.createElement('div');
     item.className = 'flex items-center gap-2.5';
 
     const boxStyle = `
         width: 14px;
         height: 14px;
-        ${!colorClass ? `background-color: ${color} !important;` : ''}
+        ${isPattern ? `background: #334155;` : (!colorClass ? `background-color: ${color} !important;` : '')}
         border: 1.5px solid rgba(255,255,255,0.2);
         border-radius: 3px;
         flex-shrink: 0;
@@ -111,11 +123,19 @@ function createLegendItem(label, color, colorClass, isPDS = false, count = null)
         overflow: hidden;
     `;
 
+    // If it's a pattern, we need to use an SVG to render it in the legend box
+    const patternBox = isPattern ? `
+        <svg width="100%" height="100%" style="display:block">
+            <rect width="100%" height="100%" fill="${color}" />
+        </svg>
+    ` : '';
+
     const innerLine = isPDS ? '<div style="position: absolute; top: 50%; left: 0; right: 0; height: 1.5px; background: white; transform: translateY(-50%); opacity: 0.8;"></div>' : '';
     const countBadge = count != null ? `<span style="color:${color}" class="ml-auto text-[11px] font-bold">${count}</span>` : '';
 
     item.innerHTML = `
         <div class="${colorClass}" style="${boxStyle}">
+            ${patternBox}
             ${innerLine}
         </div>
         <span class="text-[11px] text-slate-200 font-bold uppercase tracking-tight">${label}</span>

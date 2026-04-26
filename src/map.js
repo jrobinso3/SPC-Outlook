@@ -98,4 +98,45 @@ export function initMap() {
             loadLiveAlerts();
         }
     }, 60000);
+
+    initHatchingPatterns();
+}
+
+function initHatchingPatterns() {
+    // We need to wait for the Leaflet SVG container to be created
+    const overlayPane = document.querySelector('.leaflet-overlay-pane');
+    if (!overlayPane) {
+        setTimeout(initHatchingPatterns, 100);
+        return;
+    }
+
+    let svg = overlayPane.querySelector('svg');
+    if (!svg) {
+        // Create an SVG if it doesn't exist yet (Leaflet might create it on first path add)
+        // But usually it's better to wait for Leaflet to create it
+        setTimeout(initHatchingPatterns, 100);
+        return;
+    }
+
+    let defs = svg.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.insertBefore(defs, svg.firstChild);
+    }
+    
+    // CIG1: Light Hatch (Single Slant)
+    // CIG2: Med Hatch (Denser Slant)
+    // CIG3: Double Hatch (Cross-Hatch)
+    defs.innerHTML = `
+        <pattern id="pattern-cig1" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="10" style="stroke:rgba(255,255,255,0.4); stroke-width:1" />
+        </pattern>
+        <pattern id="pattern-cig2" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" style="stroke:rgba(255,255,255,0.6); stroke-width:1.5" />
+        </pattern>
+        <pattern id="pattern-cig3" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
+            <line x1="0" y1="0" x2="8" y2="0" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
+        </pattern>
+    `;
 }
