@@ -14,8 +14,7 @@ export async function loadLiveAlerts() {
         
         const params = new URLSearchParams({
             event: events.join(','),
-            status: 'actual',
-            message_type: 'alert'
+            status: 'actual'
         });
         
         const url = `${CONFIG.alertsApi}?${params.toString()}`;
