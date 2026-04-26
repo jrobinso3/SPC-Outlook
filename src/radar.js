@@ -1,5 +1,6 @@
 import { state, saveAppState } from './state.js';
 import { CONFIG } from './config.js';
+import { stopAnimation, animationState, toggleRadarAnimation } from './radar-animation.js';
 
 export async function fetchRadarSites() {
     try {
@@ -59,11 +60,17 @@ export function initRadarMarkers() {
 export function loadRadar(stationId, isHeartbeat = false) {
     if (!state.showRadar) return;
 
+    const wasAnimating = animationState.isPlaying;
+    stopAnimation(true); // Stop any running animation when switching
+
     const station = stationId.toLowerCase();
     const layerName = `${station}_${state.currentRadarProduct}`;
     const timestamp = Date.now();
     
-    if (!isHeartbeat && state.activeRadarId === stationId && state.activeRadarLayer?.options?.layers === layerName) {
+    if (!isHeartbeat && 
+        state.activeRadarId === stationId && 
+        state.activeRadarLayer?.options?.layers === layerName &&
+        state.map.hasLayer(state.activeRadarLayer)) {
         return;
     }
 
@@ -88,18 +95,36 @@ export function loadRadar(stationId, isHeartbeat = false) {
     state.pendingRadarLayer.on('load', function() {
         if (this !== state.pendingRadarLayer) return;
 
+        // Ensure we still want to show radar
+        if (!state.showRadar) {
+            state.map.removeLayer(this);
+            state.pendingRadarLayer = null;
+            return;
+        }
+
         if (state.activeRadarLayer) {
             state.map.removeLayer(state.activeRadarLayer);
         }
         state.activeRadarLayer = this;
         state.activeRadarId = stationId;
         state.pendingRadarLayer = null;
-        
+
+        if (wasAnimating) toggleRadarAnimation();
+
         // Update UI indicator
         const radarLabel = document.querySelector('.radar-site-label.active-radar');
         if (radarLabel) {
             radarLabel.classList.add('synced');
             setTimeout(() => radarLabel.classList.remove('synced'), 1000);
+        }
+
+        // Update Radar Timestamp Panel
+        const stationEl = document.getElementById('radar-station-name');
+        const timeEl = document.getElementById('radar-timestamp');
+        if (stationEl && timeEl) {
+            const site = state.radarSites.find(s => s.id === stationId);
+            stationEl.textContent = `${stationId} ${site ? `(${site.city})` : ''}`;
+            timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
     });
 

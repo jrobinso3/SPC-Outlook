@@ -296,6 +296,10 @@
             </div>
 
             <!-- Custom Layer Menu -->
+            <div class="flex items-center gap-2">
+                <button id="toggle-radar-animation-header" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none" title="Animate Radar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 12 8-12 8V4z"/></svg>
+                </button>
             <div class="relative">
                 <button id="active-day-label" class="bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-blue-500/30 whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer outline-none">
                     <span>Map Layers</span>
@@ -316,10 +320,15 @@
                         <div class="flex flex-col gap-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Radar</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="toggle-radar-layer" checked>
-                                    <span class="slider"></span>
-                                </label>
+                                <div class="flex items-center gap-2">
+                                    <button id="toggle-radar-animation" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none" title="Animate Radar">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 12 8-12 8V4z"/></svg>
+                                    </button>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="toggle-radar-layer" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
                             </div>
                             <div id="radar-product-selector" class="flex p-1 bg-white/5 rounded-xl gap-1">
                                 <button data-product="sr_bref" class="radar-product-btn active flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tight outline-none">Reflectivity</button>
@@ -353,6 +362,7 @@
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </header>
@@ -396,6 +406,15 @@
             <div id="discussion-body" class="flex-1 overflow-y-auto p-6 text-sm leading-relaxed scrollbar-thin scrollbar-thumb-white/10">
                 <p class="text-slate-400 italic text-center mt-8">Select a region to view the technical discussion...</p>
             </div>
+        </div>
+
+        <!-- Radar Timestamp Panel -->
+        <div id="radar-timestamp-container" class="glass-panel absolute bottom-8 right-6 p-3 px-4 rounded-xl z-[1000] transition-all duration-300 opacity-0 pointer-events-none sm:opacity-100 sm:pointer-events-auto flex flex-col gap-0.5">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span id="radar-station-name" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Radar Selected</span>
+            </div>
+            <div id="radar-timestamp" class="text-[11px] font-semibold text-white tabular-nums">--:-- --</div>
         </div>
     </main>
 

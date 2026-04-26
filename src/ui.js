@@ -3,6 +3,7 @@ import { CONFIG } from './config.js';
 import { switchOutlook } from './outlooks.js';
 import { loadLiveAlerts } from './alerts.js';
 import { loadRadar, findNearestRadar } from './radar.js';
+import { toggleRadarAnimation, stopAnimation } from './radar-animation.js';
 
 export function initUIListeners() {
     const closeBtn = document.getElementById('close-panel');
@@ -37,8 +38,16 @@ export function initUIListeners() {
         if (state.showRadar) {
             if (state.activeRadarId) loadRadar(state.activeRadarId);
             else findNearestRadar(true);
-        } else if (state.activeRadarLayer) {
-            state.map.removeLayer(state.activeRadarLayer);
+        } else {
+            stopAnimation();
+            if (state.activeRadarLayer) {
+                state.map.removeLayer(state.activeRadarLayer);
+                state.activeRadarLayer = null;
+            }
+            if (state.pendingRadarLayer) {
+                state.map.removeLayer(state.pendingRadarLayer);
+                state.pendingRadarLayer = null;
+            }
         }
         saveAppState();
     });
@@ -114,6 +123,18 @@ export function initUIListeners() {
             state.radarSitesLayer.addTo(state.map);
             radarStatusDot.classList.replace('bg-slate-500', 'bg-blue-500');
         }
+    });
+
+    const toggleAnimationBtn = document.getElementById('toggle-radar-animation');
+    toggleAnimationBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleRadarAnimation();
+    });
+
+    const toggleAnimationHeaderBtn = document.getElementById('toggle-radar-animation-header');
+    toggleAnimationHeaderBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleRadarAnimation();
     });
 }
 
