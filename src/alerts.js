@@ -19,6 +19,16 @@ export async function loadLiveAlerts() {
         
         const url = `${CONFIG.alertsApi}?${params.toString()}`;
         
+        // If everything is disabled, clear and exit early to save bandwidth
+        if (!state.showAlerts && !state.showWatches) {
+            if (state.activeAlertsLayer) state.activeAlertsLayer.clearLayers();
+            if (state.activeWatchesLayer) state.activeWatchesLayer.clearLayers();
+            state.alertCounts = {};
+            state.activeAlertTypes = [];
+            updateMapLegend();
+            return;
+        }
+
         const response = await fetch(url, {
             headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' },
             cache: 'no-store'
@@ -27,6 +37,8 @@ export async function loadLiveAlerts() {
         if (!response.ok) throw new Error('Alerts fetch failed');
         const data = await response.json();
         
+        if (!data || !data.features) return;
+
         const priorityOrder = {
             'Tornado Warning': 4,
             'Severe Thunderstorm Warning': 3,
@@ -38,49 +50,60 @@ export async function loadLiveAlerts() {
             return (priorityOrder[a.properties.event] || 0) - (priorityOrder[b.properties.event] || 0);
         });
 
-        // Initialize groups if needed
+        // Initialize groups if needed and ensure they are on the map
         if (!state.activeAlertsLayer) state.activeAlertsLayer = L.featureGroup().addTo(state.map);
         if (!state.activeWatchesLayer) state.activeWatchesLayer = L.featureGroup().addTo(state.map);
         
+        // Clear old data
         state.activeAlertsLayer.clearLayers();
         state.activeWatchesLayer.clearLayers();
 
-        // Fetch watch polygons from ArcGIS (NWS API returns null geometry for watches)
-        let watchData = { features: [] };
+        // 1. Process Watches (Fetched from ArcGIS MapServer)
+        let watchData = { type: 'FeatureCollection', features: [] };
         try {
             watchData = await loadWatchPolygons();
         } catch (e) {
             console.warn('Watch polygon fetch failed:', e);
         }
-        const watchGeojson = L.geoJSON(watchData, {
-            pane: 'watchPane',
-            style: getAlertStyle,
-            onEachFeature: (f, l) => onEachAlert(f, l, state.activeWatchesLayer)
-        });
-        if (state.showWatches) state.activeWatchesLayer.addLayer(watchGeojson);
 
-        // Render warnings as GeoJSON
-        const warningData = { ...data, features: data.features.filter(f => f.properties.event.includes('Warning')) };
-        const warningGeojson = L.geoJSON(warningData, {
-            pane: 'alertPane',
-            style: getAlertStyle,
-            onEachFeature: (f, l) => onEachAlert(f, l, state.activeAlertsLayer)
-        });
-        if (state.showAlerts) state.activeAlertsLayer.addLayer(warningGeojson);
+        if (state.showWatches && watchData.features.length > 0) {
+            const watchGeojson = L.geoJSON(watchData, {
+                pane: 'watchPane',
+                style: getAlertStyle,
+                onEachFeature: (f, l) => onEachAlert(f, l, state.activeWatchesLayer)
+            });
+            state.activeWatchesLayer.addLayer(watchGeojson);
+        }
 
-        // Collect active event types and counts for the legend
+        // 2. Process Warnings (Fetched from NWS API)
+        const warningFeatures = data.features.filter(f => f.properties.event && f.properties.event.includes('Warning'));
+        if (state.showAlerts && warningFeatures.length > 0) {
+            const warningData = { type: 'FeatureCollection', features: warningFeatures };
+            const warningGeojson = L.geoJSON(warningData, {
+                pane: 'alertPane',
+                style: getAlertStyle,
+                onEachFeature: (f, l) => onEachAlert(f, l, state.activeAlertsLayer)
+            });
+            state.activeAlertsLayer.addLayer(warningGeojson);
+        }
+
+        // 3. Update Legend counts
         const counts = {};
-        warningData.features.forEach(f => {
-            const evt = f.properties.event;
-            counts[evt] = (counts[evt] || 0) + 1;
-        });
-        watchData.features.forEach(f => {
-            const evt = f.properties.event;
-            counts[evt] = (counts[evt] || 0) + 1;
-        });
+        if (state.showAlerts) {
+            warningFeatures.forEach(f => {
+                const evt = f.properties.event;
+                counts[evt] = (counts[evt] || 0) + 1;
+            });
+        }
+        if (state.showWatches) {
+            watchData.features.forEach(f => {
+                const evt = f.properties.event;
+                counts[evt] = (counts[evt] || 0) + 1;
+            });
+        }
+        
         state.alertCounts = counts;
         state.activeAlertTypes = Object.keys(counts);
-
         updateMapLegend();
         
     } catch (error) {

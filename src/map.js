@@ -19,6 +19,10 @@ export function initMap() {
     state.map.createPane('outlookPane');
     state.map.getPane('outlookPane').style.zIndex = 350;
 
+    state.map.createPane('sigPane');
+    state.map.getPane('sigPane').style.zIndex = 600;
+    state.map.getPane('sigPane').style.pointerEvents = 'none';
+
     state.map.createPane('watchPane');
     state.map.getPane('watchPane').style.zIndex = 400;
 
@@ -94,12 +98,50 @@ export function initMap() {
     }, 30000); 
 
     setInterval(() => {
-        if (state.showAlerts) {
+        if (state.showAlerts || state.showWatches) {
             loadLiveAlerts();
         }
     }, 60000);
 
     initHatchingPatterns();
+}
+
+export function locateUser() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser");
+        return;
+    }
+
+    const btn = document.getElementById('get-location');
+    btn.classList.add('text-blue-500', 'animate-pulse');
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            state.map.setView([latitude, longitude], 9);
+            
+            // Add a small pulse marker for the user's location
+            if (state.userMarker) state.map.removeLayer(state.userMarker);
+            
+            state.userMarker = L.circleMarker([latitude, longitude], {
+                radius: 8,
+                fillColor: '#3b82f6',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8,
+                pane: 'labelsPane'
+            }).addTo(state.map);
+
+            btn.classList.remove('text-blue-500', 'animate-pulse');
+        },
+        (error) => {
+            console.error("Geolocation error:", error);
+            btn.classList.remove('text-blue-500', 'animate-pulse');
+            alert("Unable to retrieve your location. Please check your browser permissions.");
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
 }
 
 function initHatchingPatterns() {

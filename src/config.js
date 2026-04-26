@@ -3,21 +3,21 @@ export const CONFIG = {
     initialZoom: 4,
     apiBase: 'https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer',
     layers: [
-        { id: 1, name: 'Day 1 Categorical', key: 'day1cat', discussion: 'day1' },
-        { id: 3, name: 'Day 1 Tornado', key: 'day1torn', discussion: 'day1', sigLayerId: 2 },
-        { id: 5, name: 'Day 1 Hail', key: 'day1hail', discussion: 'day1', sigLayerId: 4 },
-        { id: 7, name: 'Day 1 Wind', key: 'day1wind', discussion: 'day1', sigLayerId: 6 },
+        { id: 1, name: "Today's Categorical Outlook", key: 'day1cat', discussion: 'day1' },
+        { id: 3, name: "Today's Tornado Probabilities", key: 'day1torn', discussion: 'day1', sigLayerId: 2 },
+        { id: 5, name: "Today's Hail Probabilities", key: 'day1hail', discussion: 'day1', sigLayerId: 4 },
+        { id: 7, name: "Today's Wind Probabilities", key: 'day1wind', discussion: 'day1', sigLayerId: 6 },
 
-        { id: 9, name: 'Day 2 Categorical', key: 'day2cat', discussion: 'day2' },
-        { id: 11, name: 'Day 2 Tornado', key: 'day2torn', discussion: 'day2', sigLayerId: 10 },
-        { id: 13, name: 'Day 2 Hail', key: 'day2hail', discussion: 'day2', sigLayerId: 12 },
-        { id: 15, name: 'Day 2 Wind', key: 'day2wind', discussion: 'day2', sigLayerId: 14 },
+        { id: 9, name: 'Day 2 Categorical Outlook', key: 'day2cat', discussion: 'day2' },
+        { id: 11, name: 'Day 2 Tornado Probabilities', key: 'day2torn', discussion: 'day2', sigLayerId: 10 },
+        { id: 13, name: 'Day 2 Hail Probabilities', key: 'day2hail', discussion: 'day2', sigLayerId: 12 },
+        { id: 15, name: 'Day 2 Wind Probabilities', key: 'day2wind', discussion: 'day2', sigLayerId: 14 },
 
-        { id: 17, name: 'Day 3 Categorical', key: 'day3cat', discussion: 'day3' },
-        { id: 19, name: 'Day 3 Total Severe', key: 'day3prob', discussion: 'day3', sigLayerId: 18 },
+        { id: 17, name: 'Day 3 Categorical Outlook', key: 'day3cat', discussion: 'day3' },
+        { id: 19, name: 'Day 3 Total Severe Probabilities', key: 'day3prob', discussion: 'day3', sigLayerId: 18 },
 
-        { id: 21, name: 'Day 4 Probabilistic', key: 'day4prob', discussion: 'day48' },
-        { id: 22, name: 'Day 5 Probabilistic', key: 'day5prob', discussion: 'day48' }
+        { id: 21, name: 'Day 4 Total Severe Probabilities', key: 'day4prob', discussion: 'day48' },
+        { id: 22, name: 'Day 5 Total Severe Probabilities', key: 'day5prob', discussion: 'day48' }
     ],
     discussionBase: 'https://www.spc.noaa.gov/products/outlook',
     colors: {

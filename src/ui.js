@@ -5,6 +5,7 @@ import { loadLiveAlerts } from './alerts.js';
 import { loadRadar, findNearestRadar } from './radar.js';
 import { toggleRadarAnimation, stopAnimation } from './radar-animation.js';
 import { updateMapLegend } from './legend.js';
+import { locateUser } from './map.js';
 
 export function initUIListeners() {
     const closeBtn = document.getElementById('close-panel');
@@ -14,9 +15,15 @@ export function initUIListeners() {
     const legendContainer = document.getElementById('legend-container');
     const layerMenu = document.getElementById('layer-menu');
     const layerBtn = document.getElementById('active-day-label');
+    const locationBtn = document.getElementById('get-location');
     
     // Toggles
     const toggleAlerts = document.getElementById('toggle-alerts');
+    
+    locationBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        locateUser();
+    });
     const toggleRadarLayer = document.getElementById('toggle-radar-layer');
     const toggleOutlooks = document.getElementById('toggle-outlooks');
 
@@ -25,6 +32,7 @@ export function initUIListeners() {
     if (toggleRadarLayer) toggleRadarLayer.checked = state.showRadar;
     if (toggleOutlooks) toggleOutlooks.checked = state.showOutlooks;
 
+    updateDynamicLabels();
     renderOutlookList();
 
     toggleAlerts?.addEventListener('change', (e) => {
@@ -152,10 +160,18 @@ export async function renderOutlookList() {
     if (!layerOptions) return;
     layerOptions.innerHTML = '';
 
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const now = new Date();
+    const getDayName = (offset) => {
+        const d = new Date();
+        d.setDate(now.getDate() + offset);
+        return dayNames[d.getDay()];
+    };
+
     const groups = {
-        'Day 1': CONFIG.layers.filter(l => l.key.startsWith('day1')),
-        'Day 2': CONFIG.layers.filter(l => l.key.startsWith('day2')),
-        'Day 3': CONFIG.layers.filter(l => l.key.startsWith('day3')),
+        'Today': CONFIG.layers.filter(l => l.key.startsWith('day1')),
+        [getDayName(1)]: CONFIG.layers.filter(l => l.key.startsWith('day2')),
+        [getDayName(2)]: CONFIG.layers.filter(l => l.key.startsWith('day3')),
         'Extended': CONFIG.layers.filter(l => l.key.startsWith('day4') || l.key.startsWith('day5'))
     };
 
@@ -163,7 +179,7 @@ export async function renderOutlookList() {
         if (layers.length === 0) continue;
 
         const groupHeader = document.createElement('div');
-        groupHeader.className = 'text-[9px] font-bold text-blue-500/50 uppercase tracking-widest mt-3 mb-1 first:mt-0 px-2';
+        groupHeader.className = 'text-[9px] font-bold text-blue-500/50 uppercase tracking-widest mt-4 mb-1 first:mt-0 px-2 border-t border-white/5 pt-3 first:border-0 first:pt-0';
         groupHeader.textContent = groupName;
         layerOptions.appendChild(groupHeader);
 
@@ -175,8 +191,8 @@ export async function renderOutlookList() {
                 isActive ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'hover:bg-white/5 text-slate-300 border border-transparent'
             } ${!state.showOutlooks ? 'opacity-50 pointer-events-none' : ''}`;
             
-            // Clean up name (remove Day X prefix for inner list)
-            const displayName = layerInfo.name.replace(/Day \d+ /i, '');
+            // Extract the product type (Categorical, Tornado Probabilities, etc)
+            const displayName = layerInfo.name.includes("'s ") ? layerInfo.name.split("'s ").pop() : layerInfo.name;
 
             btn.innerHTML = `
                 <span class="text-xs font-medium">${displayName}</span>
@@ -198,4 +214,22 @@ export async function renderOutlookList() {
             layerOptions.appendChild(btn);
         }
     }
+}
+
+function updateDynamicLabels() {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const now = new Date();
+    
+    CONFIG.layers.forEach(layer => {
+        const match = layer.name.match(/Day (\d+)/i);
+        if (match) {
+            const dayNum = parseInt(match[1]);
+            const targetDate = new Date();
+            targetDate.setDate(now.getDate() + (dayNum - 1));
+            
+            const dayName = dayNames[targetDate.getDay()];
+            // Replace "Day X" with "Monday's", "Tuesday's", etc.
+            layer.name = layer.name.replace(/Day \d+/i, `${dayName}'s`);
+        }
+    });
 }

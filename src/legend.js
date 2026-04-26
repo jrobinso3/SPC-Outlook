@@ -50,10 +50,11 @@ function appendOutlookLegend(container, layerInfo) {
     });
 
     // 2. Handle Intensity (SIG) levels
+    const isTornado = layerInfo.key.includes('torn');
     const sigLevels = [
-        { key: 'CIG1', label: 'SIG Level 1', pattern: 'url(#pattern-cig1)' },
-        { key: 'CIG2', label: 'SIG Level 2', pattern: 'url(#pattern-cig2)' },
-        { key: 'CIG3', label: 'SIG Level 3', pattern: 'url(#pattern-cig3)' }
+        { key: 'CIG1', label: isTornado ? 'EF2 - EF3 Tornadoes Possible' : 'SIG Level 1', pattern: 'url(#pattern-cig1)' },
+        { key: 'CIG2', label: isTornado ? 'EF4 Tornadoes Possible' : 'SIG Level 2', pattern: 'url(#pattern-cig2)' },
+        { key: 'CIG3', label: isTornado ? 'EF5 Tornadoes Possible' : 'SIG Level 3', pattern: 'url(#pattern-cig3)' }
     ];
 
     sigLevels.filter(sig => active.includes(sig.key)).forEach(sig => {

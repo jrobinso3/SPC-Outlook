@@ -29,7 +29,8 @@ export const state = {
     radarSitesLayer: null,
     activeRadarLayer: null,
     pendingRadarLayer: null,
-    activeRadarId: null
+    activeRadarId: null,
+    userMarker: null
 };
 
 export function saveAppState() {

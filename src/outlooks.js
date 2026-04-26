@@ -34,7 +34,7 @@ export async function switchOutlook(layerInfo) {
                 if (sigData.features.length > 0) {
                     const sigLayer = L.geoJSON(sigData, {
                         style: getSigStyle,
-                        pane: 'outlookPane',
+                        pane: 'sigPane',
                         interactive: false // Let the prob layer handle interactions
                     });
                     outlookGroup.addLayer(sigLayer);
@@ -85,8 +85,8 @@ function getSigStyle(feature) {
     return {
         fillColor: patternMap[label] || 'transparent',
         fillOpacity: 1,
-        weight: 0,
-        color: 'transparent',
+        weight: 2,
+        color: 'rgba(0,0,0,0.8)',
         interactive: false
     };
 }
