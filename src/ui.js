@@ -4,6 +4,7 @@ import { switchOutlook } from './outlooks.js';
 import { loadLiveAlerts } from './alerts.js';
 import { loadRadar, findNearestRadar } from './radar.js';
 import { toggleRadarAnimation, stopAnimation } from './radar-animation.js';
+import { updateMapLegend } from './legend.js';
 
 export function initUIListeners() {
     const closeBtn = document.getElementById('close-panel');
@@ -28,8 +29,14 @@ export function initUIListeners() {
 
     toggleAlerts?.addEventListener('change', (e) => {
         state.showAlerts = e.target.checked;
-        if (state.showAlerts) loadLiveAlerts();
-        else if (state.activeAlertsLayer) state.map.removeLayer(state.activeAlertsLayer);
+        loadLiveAlerts();
+        saveAppState();
+    });
+
+    const toggleWatches = document.getElementById('toggle-watches');
+    toggleWatches?.addEventListener('change', (e) => {
+        state.showWatches = e.target.checked;
+        loadLiveAlerts();
         saveAppState();
     });
 
@@ -54,12 +61,14 @@ export function initUIListeners() {
 
     toggleOutlooks?.addEventListener('change', (e) => {
         state.showOutlooks = e.target.checked;
+        const currentLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey);
+
         if (state.showOutlooks) {
-            const currentLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey);
             if (currentLayer) switchOutlook(currentLayer);
-        } else if (state.activeLayer) {
-            state.map.removeLayer(state.activeLayer);
+        } else {
+            if (state.activeLayer) state.map.removeLayer(state.activeLayer);
         }
+        updateMapLegend();
         saveAppState();
     });
 

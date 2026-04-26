@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import { fetchGeoJSON, formatSPCDate, cleanDiscussionText } from './utils.js';
+import { updateMapLegend } from './legend.js';
 
 export async function switchOutlook(layerInfo) {
     if (state.activeLayer) state.map.removeLayer(state.activeLayer);
@@ -15,9 +16,13 @@ export async function switchOutlook(layerInfo) {
             onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
         });
 
+        state.activeOutlookCategories = [...new Set(
+            data.features.map(f => (f.properties.label || f.properties.LABEL || '').toUpperCase()).filter(Boolean)
+        )];
+
         if (state.showOutlooks) state.activeLayer.addTo(state.map);
-        
-        updateLegend(layerInfo);
+
+        updateMapLegend();
     } catch (error) {
         console.error(`Error switching outlook to ${layerInfo.name}:`, error);
     }
@@ -79,50 +84,6 @@ function onEachFeature(feature, layer, layerInfo) {
     });
 }
 
-function updateLegend(layerInfo) {
-    const legendItems = document.getElementById('legend-items');
-    const legendTitle = document.getElementById('legend-title');
-    if (!legendItems) return;
-    
-    legendItems.innerHTML = '';
-    legendTitle.textContent = layerInfo.name;
-
-    const categories = layerInfo.key.includes('cat') 
-        ? ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH']
-        : ['0.02', '0.05', '0.10', '0.15', '15%', '30%', '45%', '60%'];
-
-    categories.forEach(cat => {
-        const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
-        const colorClass = cat.match(/^[A-Z]+$/) ? `bg-spc-${cat.toLowerCase()}` : '';
-        const item = document.createElement('div');
-        
-        item.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        `;
-
-        item.innerHTML = `
-            <div class="${colorClass}" style="
-                width: 14px; 
-                height: 14px; 
-                ${!colorClass ? `background-color: ${color} !important;` : ''}
-                border: 1.5px solid rgba(255,255,255,0.2); 
-                border-radius: 3px;
-                flex-shrink: 0;
-            "></div>
-            <span style="
-                font-size: 11px; 
-                color: #f1f5f9; 
-                font-weight: 600; 
-                text-transform: uppercase; 
-                letter-spacing: 0.025em;
-            ">${cat}</span>
-        `;
-        legendItems.appendChild(item);
-    });
-}
 
 async function showDiscussion(type, baseDateStr) {
     const sidePanel = document.getElementById('side-panel');

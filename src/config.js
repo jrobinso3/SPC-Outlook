@@ -35,6 +35,7 @@ export const CONFIG = {
         'DEFAULT': '#3b82f6'
     },
     alertsApi: 'https://api.weather.gov/alerts/active',
+    watchPolygonsApi: 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/6',
     alertColors: {
         'Tornado Warning': '#ff0000',
         'Tornado Watch': '#ffff00',

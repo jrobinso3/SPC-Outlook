@@ -1,10 +1,24 @@
 import { state } from './state.js';
 import { CONFIG } from './config.js';
+import { updateMapLegend } from './legend.js';
 
 export async function loadLiveAlerts() {
     try {
-        const events = ['Tornado Warning', 'Tornado Watch', 'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch'];
-        const url = `${CONFIG.alertsApi}?event=${encodeURIComponent(events.join(','))}`;
+        const events = [
+            'Tornado Warning', 
+            'Tornado Watch', 
+            'Severe Thunderstorm Warning', 
+            'Severe Thunderstorm Watch',
+            'Severe Weather Statement'
+        ];
+        
+        const params = new URLSearchParams({
+            event: events.join(','),
+            status: 'actual',
+            message_type: 'alert'
+        });
+        
+        const url = `${CONFIG.alertsApi}?${params.toString()}`;
         
         const response = await fetch(url, {
             headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' },
@@ -25,21 +39,102 @@ export async function loadLiveAlerts() {
             return (priorityOrder[a.properties.event] || 0) - (priorityOrder[b.properties.event] || 0);
         });
 
-        if (state.activeAlertsLayer) state.map.removeLayer(state.activeAlertsLayer);
+        // Initialize groups if needed
+        if (!state.activeAlertsLayer) state.activeAlertsLayer = L.featureGroup().addTo(state.map);
+        if (!state.activeWatchesLayer) state.activeWatchesLayer = L.featureGroup().addTo(state.map);
         
-        state.activeAlertsLayer = L.geoJSON(data, {
+        state.activeAlertsLayer.clearLayers();
+        state.activeWatchesLayer.clearLayers();
+
+        // Fetch watch polygons from ArcGIS (NWS API returns null geometry for watches)
+        let watchData = { features: [] };
+        try {
+            watchData = await loadWatchPolygons();
+        } catch (e) {
+            console.warn('Watch polygon fetch failed:', e);
+        }
+        const watchGeojson = L.geoJSON(watchData, {
+            pane: 'watchPane',
+            style: getAlertStyle,
+            onEachFeature: (f, l) => onEachAlert(f, l, state.activeWatchesLayer)
+        });
+        if (state.showWatches) state.activeWatchesLayer.addLayer(watchGeojson);
+
+        // Render warnings as GeoJSON
+        const warningData = { ...data, features: data.features.filter(f => f.properties.event.includes('Warning')) };
+        const warningGeojson = L.geoJSON(warningData, {
             pane: 'alertPane',
             style: getAlertStyle,
-            onEachFeature: onEachAlert
+            onEachFeature: (f, l) => onEachAlert(f, l, state.activeAlertsLayer)
         });
-        
-        if (state.showAlerts) state.activeAlertsLayer.addTo(state.map);
-        
-        updateAlertUI(data.features);
+        if (state.showAlerts) state.activeAlertsLayer.addLayer(warningGeojson);
+
+        // Collect active event types and counts for the legend
+        const counts = {};
+        warningData.features.forEach(f => {
+            const evt = f.properties.event;
+            counts[evt] = (counts[evt] || 0) + 1;
+        });
+        watchData.features.forEach(f => {
+            const evt = f.properties.event;
+            counts[evt] = (counts[evt] || 0) + 1;
+        });
+        state.alertCounts = counts;
+        state.activeAlertTypes = Object.keys(counts);
+
+        updateMapLegend();
         
     } catch (error) {
         console.error('Error loading live alerts:', error);
     }
+}
+
+async function loadWatchPolygons() {
+    const where = encodeURIComponent("Event LIKE '%Thunderstorm Watch%' OR Event LIKE '%Tornado Watch%'");
+    const url = `${CONFIG.watchPolygonsApi}/query?where=${where}&outFields=Event,Summary,End_,Description,Instruction&f=geojson`;
+
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Watch polygon fetch failed');
+    const data = await response.json();
+
+    // Group sub-features by SPC watch number so each watch renders as one entity
+    const watchGroups = {};
+    data.features.forEach(f => {
+        const desc = f.properties.Description || '';
+        const match = desc.match(/(?:TORNADO|SEVERE THUNDERSTORM)\s+WATCH\s+(\d+)/i);
+        const watchKey = match ? `${f.properties.Event}_${match[1]}` : `${f.properties.Event}_${f.properties.End_}`;
+
+        if (!watchGroups[watchKey]) {
+            watchGroups[watchKey] = { representative: f, features: [] };
+        }
+        watchGroups[watchKey].features.push(f);
+    });
+
+    // Re-emit one normalized feature per SPC watch (MultiPolygon of all sub-features)
+    const mergedFeatures = Object.values(watchGroups).map(({ representative, features }) => {
+        const p = representative.properties;
+        const desc = p.Description || '';
+        const numMatch = desc.match(/(?:TORNADO|SEVERE THUNDERSTORM)\s+WATCH\s+(\d+)/i);
+        const watchNum = numMatch ? numMatch[1] : '';
+
+        // Dissolve sub-features into one shape, removing shared internal edges
+        const dissolved = turf.union(turf.featureCollection(features));
+        const geometry = dissolved.geometry;
+
+        return {
+            type: 'Feature',
+            geometry,
+            properties: {
+                event: p.Event,
+                headline: `${p.Event}${watchNum ? ' #' + watchNum : ''}`,
+                description: desc,
+                expires: p.End_ ? new Date(p.End_).toISOString() : null,
+                instruction: p.Instruction || ''
+            }
+        };
+    });
+
+    return { type: 'FeatureCollection', features: mergedFeatures };
 }
 
 function getAlertStyle(feature) {
@@ -75,16 +170,35 @@ function getAlertStyle(feature) {
         }
     } else if (event.includes('Tornado Watch')) {
         color = '#ffff00';
+        weight = 1;
+        fillOpacity = 0.25;
+        return {
+            fillColor: color,
+            weight: weight,
+            opacity: 1,
+            color: color,
+            fillOpacity: fillOpacity
+        };
     } else if (event.includes('Severe Thunderstorm Warning')) {
         const isDestructive = desc.includes('DESTRUCTIVE') || desc.includes('80 MPH');
         if (isDestructive) {
             color = '#cc7a00';
-            weight = 3;
+            weight = 4;
         } else {
             color = '#ffa500';
+            weight = 2.5;
         }
     } else if (event.includes('Severe Thunderstorm Watch')) {
         color = '#db7093';
+        weight = 1;
+        fillOpacity = 0.25;
+        return {
+            fillColor: color,
+            weight: weight,
+            opacity: 1,
+            color: color,
+            fillOpacity: fillOpacity
+        };
     }
     
     return {
@@ -97,7 +211,7 @@ function getAlertStyle(feature) {
     };
 }
 
-function onEachAlert(feature, layer) {
+function onEachAlert(feature, layer, parentGroup) {
     const props = feature.properties;
     const desc = (props.description || '').toUpperCase();
     const headline = (props.headline || '').toUpperCase();
@@ -105,12 +219,12 @@ function onEachAlert(feature, layer) {
     const parameters = props.parameters || {};
     const tornadoThreat = (parameters.tornadoDamageThreat || [''])[0].toUpperCase();
     const isTornadoWarning = props.event === 'Tornado Warning';
-    const hasDangerous = desc.includes('DANGEROUS') || 
-                         headline.includes('DANGEROUS') || 
-                         (props.instruction || '').toUpperCase().includes('DANGEROUS');
+    const hasDangerous = desc.includes('PARTICULARLY DANGEROUS') ||
+                         headline.includes('PARTICULARLY DANGEROUS') ||
+                         (props.instruction || '').toUpperCase().includes('PARTICULARLY DANGEROUS');
 
     const isPDS = (isTornadoWarning && hasDangerous) ||
-                  desc.includes('PARTICULARLY DANGEROUS SITUATION') || 
+                  desc.includes('PARTICULARLY DANGEROUS SITUATION') ||
                   tornadoThreat === 'CONSIDERABLE' ||
                   tornadoThreat === 'DESTRUCTIVE';
     
@@ -129,7 +243,7 @@ function onEachAlert(feature, layer) {
             },
             interactive: false
         });
-        innerStripe.addTo(state.map);
+        if (parentGroup) parentGroup.addLayer(innerStripe);
     }
 
     const content = `
@@ -153,28 +267,4 @@ function onEachAlert(feature, layer) {
     layer.on('mouseout', function() {
         this.setStyle({ fillOpacity: 0.4 });
     });
-}
-
-function updateAlertUI(features) {
-    const counts = {
-        'Tornado Warning': 0,
-        'Tornado Watch': 0,
-        'Severe Thunderstorm Warning': 0,
-        'Severe Thunderstorm Watch': 0
-    };
-    
-    features.forEach(f => {
-        if (counts.hasOwnProperty(f.properties.event)) {
-            counts[f.properties.event]++;
-        }
-    });
-    
-    const container = document.getElementById('alert-status');
-    if (!container) return;
-    
-    let html = '';
-    if (counts['Tornado Warning'] > 0) html += `<span class="flex items-center gap-1.5 text-red-500 font-bold animate-pulse"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${counts['Tornado Warning']} TOR-W</span>`;
-    if (counts['Severe Thunderstorm Warning'] > 0) html += `<span class="flex items-center gap-1.5 text-orange-500 font-bold"><span class="w-2 h-2 rounded-full bg-orange-500"></span> ${counts['Severe Thunderstorm Warning']} SVR-W</span>`;
-    
-    container.innerHTML = html || '<span class="text-slate-500 text-xs italic">No active warnings</span>';
 }

@@ -19,6 +19,9 @@ export function initMap() {
     state.map.createPane('outlookPane');
     state.map.getPane('outlookPane').style.zIndex = 350;
 
+    state.map.createPane('watchPane');
+    state.map.getPane('watchPane').style.zIndex = 400;
+
     state.map.createPane('radarPane');
     state.map.getPane('radarPane').style.zIndex = 450;
 
