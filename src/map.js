@@ -29,7 +29,7 @@ export function initMap() {
     state.map.getPane('alertPane').style.zIndex = 550;
 
     state.map.createPane('labelsPane');
-    state.map.getPane('labelsPane').style.zIndex = 700;
+    state.map.getPane('labelsPane').style.zIndex = 650;
     state.map.getPane('labelsPane').style.pointerEvents = 'none';
 
     // Add zoom control to top-right
@@ -37,22 +37,32 @@ export function initMap() {
         position: 'topright'
     }).addTo(state.map);
 
-    // Dark Matter base tiles (Bottom)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
-        maxZoom: 20
+        maxZoom: 20,
+        fadeAnimation: false
     }).addTo(state.map);
 
-    // Major Roads & Reference Labels overlay (Top)
+    // Major Roads overlay (Top)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
         pane: 'labelsPane',
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
         maxZoom: 20,
-        opacity: 0.5
+        opacity: 0.65,
+        fadeAnimation: false
     }).addTo(state.map);
 
-    state.map.getPane('labelsPane').style.filter = 'brightness(0.8) contrast(1.1)';
+    // City & Place Labels (Absolute Top)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        pane: 'labelsPane',
+        subdomains: 'abcd',
+        maxZoom: 20,
+        opacity: 0.8,
+        fadeAnimation: false
+    }).addTo(state.map);
+
+    state.map.getPane('labelsPane').style.filter = 'brightness(0.9) contrast(1.2)';
 
     // Initialize core systems
     fetchRadarSites();

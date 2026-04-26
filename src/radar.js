@@ -79,6 +79,9 @@ export function loadRadar(stationId, isHeartbeat = false) {
         state.pendingRadarLayer = null;
     }
     
+    // NOTE: Use workspace/layer-specific endpoint, NOT the global /geoserver/ows endpoint.
+    // The global endpoint returns XML ServiceExceptions for these layers, causing CORB errors
+    // and blank radar tiles. Keep URL as /geoserver/${station}/${layerName}/ows with layers: layerName.
     state.pendingRadarLayer = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows`, {
         layers: layerName,
         format: 'image/png',
@@ -88,9 +91,9 @@ export function loadRadar(stationId, isHeartbeat = false) {
         opacity: 0.8,
         attribution: 'NOAA/NWS',
         maxZoom: 20,
-        maxNativeZoom: 18,
-        _cb: timestamp
+        maxNativeZoom: 18
     });
+    state.pendingRadarLayer.options.fadeAnimation = false;
 
     state.pendingRadarLayer.on('load', function() {
         if (this !== state.pendingRadarLayer) return;

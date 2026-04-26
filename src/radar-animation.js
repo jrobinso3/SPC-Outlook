@@ -68,6 +68,9 @@ async function startAnimation() {
 
     // Load frames
     animationState.frames = timestamps.map(timeStr => {
+        // NOTE: Use workspace/layer-specific endpoint, NOT the global /geoserver/ows endpoint.
+        // The global endpoint returns XML ServiceExceptions for these layers, causing CORB errors
+        // and blank radar tiles. Keep URL as /geoserver/${station}/${layerName}/ows with layers: layerName.
         const frame = L.tileLayer.wms(`https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows`, {
             layers: layerName,
             format: 'image/png',
@@ -79,6 +82,7 @@ async function startAnimation() {
             maxZoom: 20,
             maxNativeZoom: 18
         });
+        frame.options.fadeAnimation = false;
         return frame;
     });
 
