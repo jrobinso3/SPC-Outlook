@@ -62,15 +62,15 @@ function getAlertStyle(feature) {
 
         if (isEmergency) {
             color = '#ff00ff'; 
-            weight = 5;
+            weight = 12;
             fillOpacity = 0.5;
         } else if (isObserved || isPDS) {
             color = '#8b0000';
-            weight = 4;
+            weight = 10;
             fillOpacity = 0.4;
         } else {
             color = '#ff0000';
-            weight = 2;
+            weight = 2.5;
             fillOpacity = 0.3;
         }
     } else if (event.includes('Tornado Watch')) {
@@ -92,7 +92,8 @@ function getAlertStyle(feature) {
         weight: weight,
         opacity: 1,
         color: color,
-        fillOpacity: fillOpacity
+        fillOpacity: fillOpacity,
+        className: (event.includes('Tornado Warning') && (desc.includes('TORNADO...OBSERVED') || desc.includes('OBSERVED TORNADO'))) ? 'confirmed-tor' : ''
     };
 }
 
@@ -120,11 +121,10 @@ function onEachAlert(feature, layer) {
     if (isPDS || isEmergency) {
         const innerStripe = L.geoJSON(feature, {
             style: {
-                color: '#ff00ff',
-                weight: 1.5,
+                color: '#ffffff',
+                weight: 2,
                 fill: false,
-                dashArray: '5, 5',
-                opacity: 0.9,
+                opacity: 1,
                 pane: 'alertPane'
             },
             interactive: false

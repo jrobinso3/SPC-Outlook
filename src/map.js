@@ -26,7 +26,7 @@ export function initMap() {
     state.map.getPane('alertPane').style.zIndex = 550;
 
     state.map.createPane('labelsPane');
-    state.map.getPane('labelsPane').style.zIndex = 650;
+    state.map.getPane('labelsPane').style.zIndex = 700;
     state.map.getPane('labelsPane').style.pointerEvents = 'none';
 
     // Add zoom control to top-right
@@ -41,14 +41,7 @@ export function initMap() {
         maxZoom: 20
     }).addTo(state.map);
 
-    // Labels Only layer (Top)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
-        maxZoom: 20,
-        pane: 'labelsPane'
-    }).addTo(state.map);
-
-    // Major Roads overlay (Top)
+    // Major Roads & Reference Labels overlay (Top)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
         pane: 'labelsPane',
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',

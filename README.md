@@ -10,6 +10,7 @@ A real-time, high-fidelity severe weather monitoring dashboard that visualizes d
 - **Technical Discussions**: Fetch and read the latest meteorological technical discussions directly within the interface.
 - **Glassmorphism UI**: A modern, dark-themed interface built with Tailwind CSS v4 and Leaflet.js.
 - **Fully Responsive**: Optimized for both desktop monitors and smartphone devices.
+- **Style Test Environment**: A dedicated space to visualize all map element styles and warning types at `/test-map`.
 
 ## Tech Stack
 - **Framework**: Semantic HTML5 & Vanilla JavaScript

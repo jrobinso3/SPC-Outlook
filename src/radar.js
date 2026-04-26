@@ -80,6 +80,8 @@ export function loadRadar(stationId, isHeartbeat = false) {
         pane: 'radarPane',
         opacity: 0.8,
         attribution: 'NOAA/NWS',
+        maxZoom: 20,
+        maxNativeZoom: 18,
         _cb: timestamp
     });
 
