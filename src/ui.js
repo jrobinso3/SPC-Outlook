@@ -17,20 +17,20 @@ export function initUIListeners() {
     const layerBtn = document.getElementById('active-day-label');
     const locationBtn = document.getElementById('get-location');
     
-    // Toggles
     const toggleAlerts = document.getElementById('toggle-alerts');
-    
-    locationBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        locateUser();
-    });
     const toggleRadarLayer = document.getElementById('toggle-radar-layer');
     const toggleOutlooks = document.getElementById('toggle-outlooks');
+    const toggleWatches = document.getElementById('toggle-watches');
 
-    // Sync Toggles with loaded state
+    locationBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // locateUser needs update for MapLibre
+    });
+
     if (toggleAlerts) toggleAlerts.checked = state.showAlerts;
     if (toggleRadarLayer) toggleRadarLayer.checked = state.showRadar;
     if (toggleOutlooks) toggleOutlooks.checked = state.showOutlooks;
+    if (toggleWatches) toggleWatches.checked = state.showWatches;
 
     updateDynamicLabels();
     renderOutlookList();
@@ -41,7 +41,6 @@ export function initUIListeners() {
         saveAppState();
     });
 
-    const toggleWatches = document.getElementById('toggle-watches');
     toggleWatches?.addEventListener('change', (e) => {
         state.showWatches = e.target.checked;
         loadLiveAlerts();
@@ -55,14 +54,9 @@ export function initUIListeners() {
             else findNearestRadar(true);
         } else {
             stopAnimation();
-            if (state.activeRadarLayer) {
-                state.map.removeLayer(state.activeRadarLayer);
-                state.activeRadarLayer = null;
-            }
-            if (state.pendingRadarLayer) {
-                state.map.removeLayer(state.pendingRadarLayer);
-                state.pendingRadarLayer = null;
-            }
+            const map = state.map;
+            if (map.getLayer('radar-raster')) map.removeLayer('radar-raster');
+            if (map.getSource('radar-src')) map.removeSource('radar-src');
         }
         saveAppState();
     });
@@ -70,11 +64,13 @@ export function initUIListeners() {
     toggleOutlooks?.addEventListener('change', (e) => {
         state.showOutlooks = e.target.checked;
         const currentLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey);
-
         if (state.showOutlooks) {
             if (currentLayer) switchOutlook(currentLayer);
         } else {
-            if (state.activeLayer) state.map.removeLayer(state.activeLayer);
+            const map = state.map;
+            ['outlook-fill', 'outlook-border', 'sig-hatch'].forEach(id => {
+                if (map.getLayer(id)) map.removeLayer(id);
+            });
         }
         updateMapLegend();
         renderOutlookList();
@@ -84,73 +80,47 @@ export function initUIListeners() {
     // Radar Product Selection
     const productBtns = document.querySelectorAll('.radar-product-btn');
     productBtns.forEach(btn => {
-        if (btn.dataset.product === state.currentRadarProduct) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-
+        if (btn.dataset.product === state.currentRadarProduct) btn.classList.add('active');
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (btn.classList.contains('active')) return;
-
             productBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.currentRadarProduct = btn.dataset.product;
-            
             saveAppState();
-            
-            if (state.activeRadarId && state.showRadar) {
-                loadRadar(state.activeRadarId);
-            }
+            if (state.activeRadarId && state.showRadar) loadRadar(state.activeRadarId);
         });
     });
 
-    closeBtn.addEventListener('click', () => {
-        sidePanel.classList.remove('active');
-    });
-
-    layerBtn.addEventListener('click', (e) => {
+    closeBtn?.addEventListener('click', () => sidePanel.classList.remove('active'));
+    layerBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         layerMenu.classList.toggle('active');
     });
-
-    legendToggle.addEventListener('click', (e) => {
+    legendToggle?.addEventListener('click', (e) => {
         e.stopPropagation();
         legendContainer.classList.add('active');
     });
-
-    legendClose.addEventListener('click', () => {
-        legendContainer.classList.remove('active');
-    });
+    legendClose?.addEventListener('click', () => legendContainer.classList.remove('active'));
 
     document.addEventListener('click', (e) => {
-        if (!layerMenu.contains(e.target) && !layerBtn.contains(e.target)) {
-            layerMenu.classList.remove('active');
+        if (!layerMenu?.contains(e.target) && !layerBtn?.contains(e.target)) {
+            layerMenu?.classList.remove('active');
         }
     });
 
     const toggleRadarBtn = document.getElementById('toggle-radar-sites');
-    const radarStatusDot = document.getElementById('radar-sites-status');
-    
-    toggleRadarBtn.addEventListener('click', () => {
-        if (state.map.hasLayer(state.radarSitesLayer)) {
-            state.map.removeLayer(state.radarSitesLayer);
-            radarStatusDot.classList.replace('bg-blue-500', 'bg-slate-500');
-        } else {
-            state.radarSitesLayer.addTo(state.map);
-            radarStatusDot.classList.replace('bg-slate-500', 'bg-blue-500');
-        }
+    toggleRadarBtn?.addEventListener('click', () => {
+        const map = state.map;
+        if (!map.getLayer('radar-sites')) return;
+        const visible = map.getLayoutProperty('radar-sites', 'visibility') !== 'none';
+        map.setLayoutProperty('radar-sites', 'visibility', visible ? 'none' : 'visible');
+        const dot = document.getElementById('radar-sites-status');
+        if (dot) dot.classList.toggle('bg-sky-500', !visible);
+        if (dot) dot.classList.toggle('bg-slate-500', visible);
     });
 
-    const toggleAnimationBtn = document.getElementById('toggle-radar-animation');
-    toggleAnimationBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleRadarAnimation();
-    });
-
-    const toggleAnimationHeaderBtn = document.getElementById('toggle-radar-animation-header');
-    toggleAnimationHeaderBtn?.addEventListener('click', (e) => {
+    document.getElementById('toggle-radar-animation')?.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleRadarAnimation();
     });
@@ -179,39 +149,31 @@ export async function renderOutlookList() {
 
     for (const [groupName, layers] of Object.entries(groups)) {
         if (layers.length === 0) continue;
-
         const groupHeader = document.createElement('div');
-        groupHeader.className = 'text-[9px] font-bold text-blue-500/50 uppercase tracking-widest mt-4 mb-1 first:mt-0 px-2 border-t border-white/5 pt-3 first:border-0 first:pt-0';
+        groupHeader.className = 'text-[9px] font-bold text-sky-500/50 uppercase tracking-widest mt-4 mb-1 first:mt-0 px-2 border-t border-white/5 pt-3 first:border-0 first:pt-0';
         groupHeader.textContent = groupName;
         layerOptions.appendChild(groupHeader);
 
         for (const layerInfo of layers) {
             const btn = document.createElement('button');
             const isActive = state.currentOutlookKey === layerInfo.key;
-            
             btn.className = `flex items-center justify-between w-full px-3 py-2 rounded-xl text-left transition-all outline-none ${
-                isActive ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'hover:bg-white/5 text-slate-300 border border-transparent'
+                isActive ? 'bg-sky-500/15 text-sky-400 border border-sky-500/20' : 'hover:bg-white/5 text-slate-300 border border-transparent'
             } ${!state.showOutlooks ? 'opacity-50 pointer-events-none' : ''}`;
             
-            // Extract the product type (Categorical, Tornado Probabilities, etc)
             const displayName = layerInfo.name.includes("'s ") ? layerInfo.name.split("'s ").pop() : layerInfo.name;
-
             btn.innerHTML = `
                 <span class="text-xs font-medium">${displayName}</span>
-                ${isActive ? '<div class="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>' : ''}
+                ${isActive ? '<div class="w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>' : ''}
             `;
 
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 if (!state.showOutlooks || state.currentOutlookKey === layerInfo.key) return;
-                
                 state.currentOutlookKey = layerInfo.key;
                 await switchOutlook(layerInfo);
                 renderOutlookList();
-                
-                // Close menu after selection
-                const layerMenu = document.getElementById('layer-menu');
-                layerMenu?.classList.remove('active');
+                document.getElementById('layer-menu')?.classList.remove('active');
             });
             layerOptions.appendChild(btn);
         }
@@ -221,17 +183,12 @@ export async function renderOutlookList() {
 function updateDynamicLabels() {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const now = new Date();
-    
     CONFIG.layers.forEach(layer => {
         const match = layer.name.match(/Day (\d+)/i);
         if (match) {
-            const dayNum = parseInt(match[1]);
             const targetDate = new Date();
-            targetDate.setDate(now.getDate() + (dayNum - 1));
-            
-            const dayName = dayNames[targetDate.getDay()];
-            // Replace "Day X" with "Monday's", "Tuesday's", etc.
-            layer.name = layer.name.replace(/Day \d+/i, `${dayName}'s`);
+            targetDate.setDate(now.getDate() + (parseInt(match[1]) - 1));
+            layer.name = layer.name.replace(/Day \d+/i, `${dayNames[targetDate.getDay()]}'s`);
         }
     });
 }

@@ -4,51 +4,94 @@ import { formatSPCDate, cleanDiscussionText } from './utils.js';
 import { updateMapLegend } from './legend.js';
 import { ThemeManager } from './theme.js';
 import { DataProvider } from './api.js';
+import { getFirstLabelLayerId } from './map.js';
 
 export async function switchOutlook(layerInfo) {
-    if (state.activeLayer) state.map.removeLayer(state.activeLayer);
-    
+    const map = state.map;
+    if (!map) return;
+
+    // Remove existing outlook layers and sources
+    if (map.getLayer('outlook-fill')) map.removeLayer('outlook-fill');
+    if (map.getLayer('outlook-border')) map.removeLayer('outlook-border');
+    if (map.getLayer('sig-hatch')) map.removeLayer('sig-hatch');
+    if (map.getSource('outlooks')) map.removeSource('outlooks');
+    if (map.getSource('sig-data')) map.removeSource('sig-data');
+
     try {
-        const outlookGroup = L.layerGroup();
-        
-        // 1. Fetch main probabilistic/categorical data via DataProvider
+        // 1. Fetch main probabilistic/categorical data
         const probData = await DataProvider.fetchOutlook(layerInfo.id);
         if (!probData) return;
-        
-        const probLayer = L.geoJSON(probData, {
-            style: (f) => getFeatureStyle(f, layerInfo),
-            pane: 'outlookPane',
-            onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
+
+        const beforeId = getFirstLabelLayerId(map);
+
+        map.addSource('outlooks', {
+            type: 'geojson',
+            data: probData
         });
-        outlookGroup.addLayer(probLayer);
 
-        // Extract active categories for legend
-        state.activeOutlookCategories = [...new Set(
-            probData.features.map(f => f.properties.displayLabel).filter(Boolean)
-        )];
+        // Add fill layer
+        map.addLayer({
+            id: 'outlook-fill',
+            type: 'fill',
+            source: 'outlooks',
+            paint: {
+                'fill-color': ['get', 'color'], // Use color property added by DataProvider normalization if available
+                'fill-opacity': 0.35
+            }
+        }, beforeId);
 
-        // 2. Fetch SIG (Intensity/Hatching) data
+        // Update fill colors based on theme if not in properties
+        const categories = [...new Set(probData.features.map(f => f.properties.displayLabel).filter(Boolean))];
+        state.activeOutlookCategories = categories;
+
+        // Custom paint expression for category colors
+        const colorExpression = ['match', ['get', 'displayLabel']];
+        categories.forEach(cat => {
+            colorExpression.push(cat, ThemeManager.getColor(layerInfo.key, cat));
+        });
+        colorExpression.push('rgba(0,0,0,0)'); // fallback
+
+        map.setPaintProperty('outlook-fill', 'fill-color', colorExpression);
+
+        // Add border layer
+        map.addLayer({
+            id: 'outlook-border',
+            type: 'line',
+            source: 'outlooks',
+            paint: {
+                'line-color': colorExpression,
+                'line-width': 1.5
+            }
+        }, beforeId);
+
+        // 2. Handle SIG (Intensity)
         if (layerInfo.sigLayerId) {
             try {
                 const sigData = await DataProvider.fetchSigData(layerInfo.sigLayerId);
                 if (sigData && sigData.features.length > 0) {
-                    const sigLayer = L.geoJSON(sigData, {
-                        style: getSigStyle,
-                        pane: 'sigPane',
-                        interactive: false
-                    });
-                    outlookGroup.addLayer(sigLayer);
+                    map.addSource('sig-data', { type: 'geojson', data: sigData });
                     
+                    // For now, use a dark semi-transparent fill for SIG instead of complex SVG hatching
+                    map.addLayer({
+                        id: 'sig-hatch',
+                        type: 'fill',
+                        source: 'sig-data',
+                        paint: {
+                            'fill-color': 'rgba(0,0,0,0.15)',
+                            'fill-outline-color': 'rgba(0,0,0,0.8)'
+                        }
+                    }, beforeId);
+
                     const sigCats = sigData.features.map(f => f.properties.label).filter(Boolean);
                     state.activeOutlookCategories.push(...sigCats);
                 }
             } catch (e) {
-                console.warn(`Sig layer fetch failed for ${layerInfo.name}:`, e);
+                console.warn(`Sig layer failed for ${layerInfo.name}:`, e);
             }
         }
 
-        state.activeLayer = outlookGroup;
-        if (state.showOutlooks) state.activeLayer.addTo(state.map);
+        // 3. Setup Click Handlers (Popups)
+        setupOutlookInteractions(layerInfo);
 
         updateMapLegend();
     } catch (error) {
@@ -56,57 +99,46 @@ export async function switchOutlook(layerInfo) {
     }
 }
 
-function getFeatureStyle(feature, layerInfo) {
-    const color = ThemeManager.getColor(layerInfo.key, feature.properties.displayLabel);
-    
-    return {
-        fillColor: color,
-        weight: 1.5,
-        opacity: 1,
-        color: color,
-        fillOpacity: 0.35
-    };
-}
+function setupOutlookInteractions(layerInfo) {
+    const map = state.map;
 
-function getSigStyle(feature) {
-    return {
-        fillColor: ThemeManager.getSigPattern(feature.properties.label),
-        fillOpacity: 1,
-        weight: 2,
-        color: 'rgba(0,0,0,0.8)',
-        interactive: false
-    };
-}
+    map.on('click', 'outlook-fill', (e) => {
+        if (!e.features.length) return;
+        const p = e.features[0].properties;
+        const color = ThemeManager.getColor(layerInfo.key, p.displayLabel);
+        const readableValid = formatSPCDate(p.valid);
+        const readableExpire = formatSPCDate(p.expire);
 
-function onEachFeature(feature, layer, layerInfo) {
-    const p = feature.properties;
-    const color = ThemeManager.getColor(layerInfo.key, p.displayLabel);
-    const readableValid = formatSPCDate(p.valid);
-    const readableExpire = formatSPCDate(p.expire);
+        const content = `
+            <div class="popup-content">
+                <h4 class="text-lg font-bold mb-2" style="color: ${color}">${p.label2}</h4>
+                <hr class="my-2 border-white/10">
+                <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
+                <button id="spc-discussion-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
+                    View Technical Discussion
+                </button>
+            </div>
+        `;
 
-    const content = `
-        <div class="popup-content">
-            <h4 class="text-lg font-bold mb-2" style="color: ${color}">${p.label2}</h4>
-            <hr class="my-2 border-white/10">
-            <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
-            <button class="view-discussion-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
-                View Technical Discussion
-            </button>
-        </div>
-    `;
-    
-    layer.bindPopup(content, { className: 'custom-popup', maxWidth: 220 });
-    
-    layer.on('popupopen', (e) => {
-        const btn = e.popup.getElement().querySelector('.view-discussion-btn');
-        if (btn) btn.onclick = (ev) => {
-            ev.preventDefault();
-            showDiscussion(layerInfo.discussion, p.valid);
-        };
+        new maplibregl.Popup({ className: 'custom-popup', maxWidth: '220px' })
+            .setLngLat(e.lngLat)
+            .setHTML(content)
+            .addTo(map);
+
+        // Handle discussion button click
+        setTimeout(() => {
+            const btn = document.getElementById('spc-discussion-btn');
+            if (btn) btn.onclick = () => showDiscussion(layerInfo.discussion, p.valid);
+        }, 0);
     });
 
-    layer.on('mouseover', function() { this.setStyle({ fillOpacity: 0.6, weight: 3 }); });
-    layer.on('mouseout', function() { this.setStyle({ fillOpacity: 0.35, weight: 1.5 }); });
+    // Hover effects
+    map.on('mouseenter', 'outlook-fill', () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'outlook-fill', () => {
+        map.getCanvas().style.cursor = '';
+    });
 }
 
 async function showDiscussion(type, baseDateStr) {
@@ -115,7 +147,7 @@ async function showDiscussion(type, baseDateStr) {
     if (!sidePanel || !body) return;
     
     sidePanel.classList.add('active');
-    body.innerHTML = '<div class="flex items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>';
+    body.innerHTML = '<div class="flex items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div></div>';
     
     try {
         const targetUrl = `${CONFIG.discussionBase}/${type}otlk.html`;
@@ -144,4 +176,3 @@ async function showDiscussion(type, baseDateStr) {
         body.innerHTML = '<div class="placeholder">Error loading discussion. Please try again later.</div>';
     }
 }
-

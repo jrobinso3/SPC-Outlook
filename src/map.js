@@ -1,6 +1,6 @@
 import { state, saveAppState, loadAppState } from './state.js';
 import { CONFIG } from './config.js';
-import { fetchRadarSites, loadRadar, findNearestRadar } from './radar.js';
+import { fetchRadarSites, findNearestRadar } from './radar.js';
 import { loadLiveAlerts } from './alerts.js';
 import { initUIListeners } from './ui.js';
 import { switchOutlook } from './outlooks.js';
@@ -8,192 +8,122 @@ import { switchOutlook } from './outlooks.js';
 export function initMap() {
     const savedState = loadAppState();
 
-    const startCenter = savedState?.center || CONFIG.mapCenter;
+    // Defensive center normalization for MapLibre [lng, lat]
+    let startCenter = [CONFIG.mapCenter[1], CONFIG.mapCenter[0]];
+    if (savedState?.center) {
+        const c = savedState.center;
+        // Handle both [lat, lng] array and {lat, lng} object
+        const lng = Array.isArray(c) ? c[1] : (c.lng || c.lon);
+        const lat = Array.isArray(c) ? c[0] : c.lat;
+        
+        if (!isNaN(lng) && !isNaN(lat)) {
+            startCenter = [lng, lat];
+        }
+    }
     const startZoom = savedState?.zoom || CONFIG.initialZoom;
 
-    state.map = L.map('map', {
-        zoomControl: false
-    }).setView(startCenter, startZoom);
-
-    // Create custom panes for robust layer stacking
-    state.map.createPane('outlookPane');
-    state.map.getPane('outlookPane').style.zIndex = 350;
-
-    state.map.createPane('sigPane');
-    state.map.getPane('sigPane').style.zIndex = 360;
-    state.map.getPane('sigPane').style.pointerEvents = 'none';
-
-    state.map.createPane('watchPane');
-    state.map.getPane('watchPane').style.zIndex = 400;
-
-    state.map.createPane('radarPane');
-    state.map.getPane('radarPane').style.zIndex = 450;
-
-    state.map.createPane('alertPane');
-    state.map.getPane('alertPane').style.zIndex = 550; // Warnings
-
-    state.map.createPane('labelsPane');
-    state.map.getPane('labelsPane').style.zIndex = 650;
-    state.map.getPane('labelsPane').style.pointerEvents = 'none';
-
-    // Add zoom control to top-right
-    L.control.zoom({
-        position: 'topright'
-    }).addTo(state.map);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
-        fadeAnimation: false
-    }).addTo(state.map);
-
-    // Major Roads overlay (From Esri: Shields and Street Names)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-        pane: 'labelsPane',
-        attribution: 'Tiles &copy; Esri',
-        maxZoom: 20,
-        opacity: 0.8,
-        fadeAnimation: false
-    }).addTo(state.map);
-
-    // Synchronized City & Town Labels (Complementary to the roads layer)
-    L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-        pane: 'labelsPane',
-        attribution: 'Tiles &copy; Esri',
-        maxZoom: 20,
-        maxNativeZoom: 16,
-        opacity: 1.0,
-        fadeAnimation: false
-    }).addTo(state.map);
-
-    state.map.getPane('labelsPane').style.filter = 'brightness(0.9) contrast(1.2)';
-
-    // Initialize core systems
-    fetchRadarSites();
-    loadLiveAlerts();
-
-    // Auto-switch radar based on map center
-    let moveTimeout;
-    state.map.on('move', () => {
-        clearTimeout(moveTimeout);
-        moveTimeout = setTimeout(() => {
-            findNearestRadar();
-            saveAppState();
-        }, 250);
+    state.map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://tiles.openfreemap.org/styles/dark',
+        center: startCenter,
+        zoom: startZoom,
+        attributionControl: false,
+        // Override glyphs to a more reliable source if OpenFreeMap is failing
+        transformRequest: (url, resourceType) => {
+            if (resourceType === 'Glyphs') {
+                // Redirect to a stable font server and simplify the font stack to one that exists there
+                const newUrl = url
+                    .replace('tiles.openfreemap.org/fonts', 'demotiles.maplibre.org/font')
+                    .replace('Open%20Sans%20Regular,Arial%20Unicode%20MS%20Regular', 'Noto%20Sans%20Regular')
+                    .replace('Open%20Sans%20Semibold,Arial%20Unicode%20MS%20Regular', 'Noto%20Sans%20Bold');
+                return { url: newUrl };
+            }
+        }
     });
 
-    initUIListeners();
+    // Handle missing images (like circle-11) by providing a fallback
+    // Must be attached BEFORE 'load' event as style starts requesting images early
+    state.map.on('styleimagemissing', (e) => {
+        const id = e.id;
+        if (id.includes('circle')) {
+            const size = 16;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#0ea5e9';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            state.map.addImage(id, ctx.getImageData(0, 0, size, size));
+        }
+    });
 
-    // Initial Outlook Load
-    if (state.showOutlooks) {
-        const defaultLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey) || CONFIG.layers[0];
-        if (defaultLayer) switchOutlook(defaultLayer);
-    }
+    state.map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    state.map.on('load', () => {
+        // Initialize core systems
+        fetchRadarSites();
+        loadLiveAlerts();
+        initUIListeners();
+
+        // Initial Outlook Load
+        if (state.showOutlooks) {
+            const defaultLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey) || CONFIG.layers[0];
+            if (defaultLayer) switchOutlook(defaultLayer);
+        }
+
+        // Auto-switch radar based on map center
+        let moveTimeout;
+        state.map.on('moveend', () => {
+            clearTimeout(moveTimeout);
+            moveTimeout = setTimeout(() => {
+                const center = state.map.getCenter();
+                // MapLibre center to [lat, lng] for internal state/radar logic
+                const latLng = [center.lat, center.lng];
+                findNearestRadar();
+                saveAppState();
+            }, 250);
+        });
+    });
 
     // Heartbeats
     setInterval(() => {
         if (state.showRadar && state.activeRadarId) {
-            loadRadar(state.activeRadarId, true);
+            import('./radar.js').then(m => m.loadRadar(state.activeRadarId, true));
         }
     }, 30000);
-
-    setInterval(() => {
-        if (state.showAlerts || state.showWatches) {
-            loadLiveAlerts();
-        }
-    }, 60000);
-
-    initHatchingPatterns();
 }
 
 export function locateUser() {
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser");
-        return;
-    }
+    if (!navigator.geolocation) return;
+    
+    navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        
+        state.map.flyTo({
+            center: [longitude, latitude],
+            zoom: 10,
+            essential: true
+        });
 
-    const btn = document.getElementById('get-location');
-    btn.classList.add('text-blue-500', 'animate-pulse');
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const { latitude, longitude } = position.coords;
-            state.map.setView([latitude, longitude], 9);
-
-            // Add a small pulse marker for the user's location
-            if (state.userMarker) state.map.removeLayer(state.userMarker);
-
-            state.userMarker = L.circleMarker([latitude, longitude], {
-                radius: 7,
-                fillColor: '#3b82f6',
-                color: '#fff',
-                weight: 3,
-                opacity: 1,
-                fillOpacity: 1,
-                pane: 'labelsPane'
-            }).addTo(state.map);
-
-            // Optional: Add a subtle outer pulse halo
-            const pulse = L.circleMarker([latitude, longitude], {
-                radius: 15,
-                fillColor: '#3b82f6',
-                color: 'transparent',
-                weight: 0,
-                opacity: 0,
-                fillOpacity: 0.2,
-                pane: 'labelsPane'
-            }).addTo(state.map);
+        if (state.userMarker) state.userMarker.remove();
+        
+        state.userMarker = new maplibregl.Marker({ color: '#0ea5e9' })
+            .setLngLat([longitude, latitude])
+            .addTo(state.map);
             
-            // Clean up pulse if marker is removed
-            state.userMarker.on('remove', () => state.map.removeLayer(pulse));
-
-            btn.classList.remove('text-blue-500', 'animate-pulse');
-        },
-        (error) => {
-            console.error("Geolocation error:", error);
-            btn.classList.remove('text-blue-500', 'animate-pulse');
-            alert("Unable to retrieve your location. Please check your browser permissions.");
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
+        import('./radar.js').then(m => m.findNearestRadar(true));
+    });
 }
 
-function initHatchingPatterns() {
-    // We need to wait for the Leaflet SVG container to be created
-    const overlayPane = document.querySelector('.leaflet-overlay-pane');
-    if (!overlayPane) {
-        setTimeout(initHatchingPatterns, 100);
-        return;
+// Utility to find the first label layer for the "Sandwich" effect
+export function getFirstLabelLayerId(map) {
+    const layers = map.getStyle().layers;
+    for (const layer of layers) {
+        if (layer.type === 'symbol') return layer.id;
     }
-
-    let svg = overlayPane.querySelector('svg');
-    if (!svg) {
-        // Create an SVG if it doesn't exist yet (Leaflet might create it on first path add)
-        // But usually it's better to wait for Leaflet to create it
-        setTimeout(initHatchingPatterns, 100);
-        return;
-    }
-
-    let defs = svg.querySelector('defs');
-    if (!defs) {
-        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        svg.insertBefore(defs, svg.firstChild);
-    }
-
-    // CIG1: Light Hatch (Single Slant)
-    // CIG2: Med Hatch (Denser Slant)
-    // CIG3: Double Hatch (Cross-Hatch)
-    defs.innerHTML = `
-        <pattern id="pattern-cig1" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="10" style="stroke:rgba(255,255,255,0.4); stroke-width:1" />
-        </pattern>
-        <pattern id="pattern-cig2" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" style="stroke:rgba(255,255,255,0.6); stroke-width:1.5" />
-        </pattern>
-        <pattern id="pattern-cig3" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="8" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
-            <line x1="0" y1="0" x2="8" y2="0" style="stroke:rgba(255,255,255,0.8); stroke-width:1.5" />
-        </pattern>
-    `;
+    return null;
 }

@@ -5,7 +5,6 @@
 export const state = {
     map: null,
     activeLayer: null,
-    layerGroups: {},
     
     // Master visibility states
     showRadar: true,
@@ -16,9 +15,6 @@ export const state = {
     currentOutlookKey: 'day1cat',
     currentRadarProduct: 'sr_bref',
     
-    activeAlertsLayer: null, // Warnings LayerGroup
-    activeWatchesLayer: null, // Watches LayerGroup
-
     // Active data for legend filtering
     activeOutlookCategories: [],  // labels present in current outlook layer
     activeAlertTypes: [],         // event types with live features
@@ -26,17 +22,15 @@ export const state = {
     
     // Radar state variables
     radarSites: [],
-    radarSitesLayer: null,
-    activeRadarLayer: null,
-    pendingRadarLayer: null,
     activeRadarId: null,
     userMarker: null
 };
 
 export function saveAppState() {
     if (!state.map) return;
+    const center = state.map.getCenter();
     const persistence = {
-        center: state.map.getCenter(),
+        center: [center.lat, center.lng], // Save as [lat, lng] for consistency
         zoom: state.map.getZoom(),
         showRadar: state.showRadar,
         showAlerts: state.showAlerts,
