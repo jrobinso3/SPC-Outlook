@@ -77,6 +77,7 @@ export function initUIListeners() {
             if (state.activeLayer) state.map.removeLayer(state.activeLayer);
         }
         updateMapLegend();
+        renderOutlookList();
         saveAppState();
     });
 
@@ -201,7 +202,7 @@ export async function renderOutlookList() {
 
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (!state.showOutlooks || isActive) return;
+                if (!state.showOutlooks || state.currentOutlookKey === layerInfo.key) return;
                 
                 state.currentOutlookKey = layerInfo.key;
                 await switchOutlook(layerInfo);

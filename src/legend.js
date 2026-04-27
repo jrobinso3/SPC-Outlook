@@ -40,10 +40,21 @@ function appendOutlookLegend(container, layerInfo) {
 
     const categories = layerInfo.key.includes('cat')
         ? ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH']
-        : ['0.02', '0.05', '0.10', '0.15', '15%', '30%', '45%', '60%'];
+        : layerInfo.key.includes('torn')
+            ? ['2%', '5%', '10%', '15%', '30%', '45%', '60%']
+            : ['5%', '15%', '30%', '45%', '60%', '75%', '90%'];
+
+    let colorSet = CONFIG.colors.categorical;
+    if (layerInfo.key.includes('torn')) {
+        colorSet = CONFIG.colors.tornado;
+    } else if (layerInfo.key.includes('hail')) {
+        colorSet = CONFIG.colors.hail;
+    } else if (layerInfo.key.includes('wind') || layerInfo.key.includes('prob')) {
+        colorSet = CONFIG.colors.wind;
+    }
 
     categories.filter(cat => active.includes(cat)).forEach(cat => {
-        const color = CONFIG.colors[cat] || CONFIG.colors.DEFAULT;
+        const color = colorSet[cat] || CONFIG.colors.DEFAULT;
         const colorClass = cat.match(/^[A-Z]+$/) ? `bg-spc-${cat.toLowerCase()}` : '';
         const item = createLegendItem(cat, color, colorClass);
         container.appendChild(item);
@@ -51,10 +62,31 @@ function appendOutlookLegend(container, layerInfo) {
 
     // 2. Handle Intensity (SIG) levels
     const isTornado = layerInfo.key.includes('torn');
+    const isWind = layerInfo.key.includes('wind');
+    const isHail = layerInfo.key.includes('hail');
+
     const sigLevels = [
-        { key: 'CIG1', label: isTornado ? 'EF2 - EF3 Tornadoes Possible' : 'SIG Level 1', pattern: 'url(#pattern-cig1)' },
-        { key: 'CIG2', label: isTornado ? 'EF4 Tornadoes Possible' : 'SIG Level 2', pattern: 'url(#pattern-cig2)' },
-        { key: 'CIG3', label: isTornado ? 'EF5 Tornadoes Possible' : 'SIG Level 3', pattern: 'url(#pattern-cig3)' }
+        { 
+            key: 'CIG1', 
+            label: isTornado ? 'EF2 - EF3 Tornadoes Possible' : 
+                   isWind ? '75 - 84 MPH Wind Gusts' :
+                   isHail ? '2.0" - 2.9" Hail (Egg to Baseball)' : 'SIG Level 1', 
+            pattern: 'url(#pattern-cig1)' 
+        },
+        { 
+            key: 'CIG2', 
+            label: isTornado ? 'EF4 Tornadoes Possible' : 
+                   isWind ? '85 - 99 MPH Wind Gusts (Destructive)' :
+                   isHail ? '3.0" - 3.9" Hail (Tea Cup to Softball)' : 'SIG Level 2', 
+            pattern: 'url(#pattern-cig2)' 
+        },
+        { 
+            key: 'CIG3', 
+            label: isTornado ? 'EF5 Tornadoes Possible' : 
+                   isWind ? '100+ MPH Wind Gusts (Extreme)' :
+                   isHail ? '4.0"+ Hail (Grapefruit size+)' : 'SIG Level 3', 
+            pattern: 'url(#pattern-cig3)' 
+        }
     ];
 
     sigLevels.filter(sig => active.includes(sig.key)).forEach(sig => {

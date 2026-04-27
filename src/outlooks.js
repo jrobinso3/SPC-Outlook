@@ -15,14 +15,26 @@ export async function switchOutlook(layerInfo) {
         const probData = await fetchGeoJSON(probUrl);
         
         const probLayer = L.geoJSON(probData, {
-            style: getFeatureStyle,
+            style: (f) => getFeatureStyle(f, layerInfo),
             pane: 'outlookPane',
             onEachFeature: (f, l) => onEachFeature(f, l, layerInfo)
         });
         outlookGroup.addLayer(probLayer);
 
         state.activeOutlookCategories = [...new Set(
-            probData.features.map(f => (f.properties.label || f.properties.LABEL || '').toUpperCase()).filter(Boolean)
+            probData.features.map(f => {
+                const l = f.properties.label || f.properties.LABEL || '';
+                if (!l) return null;
+                // If it's a decimal like 0.02, 0.15, etc.
+                if (!isNaN(l) && parseFloat(l) > 0 && parseFloat(l) < 1) {
+                    return Math.round(parseFloat(l) * 100) + '%';
+                }
+                // If it's a number string like "15", "30"
+                if (!isNaN(l) && parseInt(l) >= 1) {
+                    return parseInt(l) + '%';
+                }
+                return l.toUpperCase();
+            }).filter(Boolean)
         )];
 
         // 2. Fetch SIG (Intensity/Hatching) data if applicable
@@ -57,10 +69,22 @@ export async function switchOutlook(layerInfo) {
     }
 }
 
-function getFeatureStyle(feature) {
+function getFeatureStyle(feature, layerInfo) {
     const props = feature.properties;
     const label = (props.label || props.LABEL || '').toUpperCase();
-    const color = CONFIG.colors[label] || CONFIG.colors['DEFAULT'];
+    
+    let colorSet = CONFIG.colors.categorical;
+    if (layerInfo.key.includes('torn')) {
+        colorSet = CONFIG.colors.tornado;
+    } else if (layerInfo.key.includes('hail')) {
+        colorSet = CONFIG.colors.hail;
+    } else if (layerInfo.key.includes('wind')) {
+        colorSet = CONFIG.colors.wind;
+    } else if (layerInfo.key.includes('prob')) {
+        colorSet = CONFIG.colors.wind; // Use wind colors as default for Day 3+ total severe
+    }
+
+    const color = colorSet[label] || CONFIG.colors['DEFAULT'];
     
     return {
         fillColor: color,
