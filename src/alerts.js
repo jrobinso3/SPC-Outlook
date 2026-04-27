@@ -147,8 +147,14 @@ async function loadWatchPolygons() {
         const numMatch = desc.match(/(?:TORNADO|SEVERE THUNDERSTORM)\s+WATCH\s+(\d+)/i);
         const watchNum = numMatch ? numMatch[1] : '';
 
-        // Dissolve sub-features into one shape, removing shared internal edges
-        const dissolved = turf.union(turf.featureCollection(features));
+        // Dissolve sub-features using buffer → union → unbuffer to close tiny seams
+        // between adjacent county geometries that don't quite share an edge.
+        const BUFFER_KM = 0.5;
+        const buffered = features.map(f => turf.buffer(f, BUFFER_KM, { units: 'kilometers' })).filter(Boolean);
+        const merged = buffered.length >= 2
+            ? turf.union(turf.featureCollection(buffered))
+            : (buffered[0] || features[0]);
+        const dissolved = merged ? turf.buffer(merged, -BUFFER_KM, { units: 'kilometers' }) : null;
         const geometry = dissolved ? dissolved.geometry : representative.geometry;
 
         return {
