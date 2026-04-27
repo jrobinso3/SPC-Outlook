@@ -95,17 +95,20 @@ function onEachAlert(feature, layer, parentGroup) {
         }));
     }
 
+    const style = ThemeManager.getAlertStyle(feature);
+    const color = style.fillColor;
+
     const content = `
-        <div class="popup-content max-h-64 overflow-y-auto pr-1">
-            <h4 class="text-xs font-bold" style="color: ${CONFIG.alertColors[p.event] || '#fff'}">${p.event}</h4>
-            ${isPDS ? '<div class="mt-1 text-[9px] font-bold text-[#ff00ff] uppercase tracking-tighter">Particularly Dangerous Situation</div>' : ''}
-            <p class="text-[10px] mt-1 font-semibold text-white">${p.headline || 'Active Warning'}</p>
+        <div class="popup-content max-h-80 overflow-y-auto pr-1">
+            <h4 class="text-lg font-bold mb-1" style="color: ${color}">${p.event}</h4>
+            ${isPDS ? '<div class="text-[9px] font-bold text-[#ff00ff] uppercase tracking-tighter mb-1">Particularly Dangerous Situation</div>' : ''}
+            <p class="text-xs text-slate-300 mb-2">${p.headline || 'Active Warning'}</p>
             <hr class="my-2 border-white/10">
-            <div class="text-[10px] text-slate-300 leading-normal mb-2 whitespace-pre-wrap">${p.description || ''}</div>
-            <div class="text-[10px] text-slate-400 pt-2 border-t border-white/5">Expires: ${new Date(p.expires).toLocaleString()}</div>
+            <div class="text-[10px] text-slate-300 leading-normal mb-3 whitespace-pre-wrap">${p.description || ''}</div>
+            <div class="text-[10px] text-slate-400">Valid Until: ${new Date(p.expires).toLocaleString()}</div>
         </div>
     `;
-    layer.bindPopup(content, { maxWidth: 240, className: 'alert-popup' });
+    layer.bindPopup(content, { maxWidth: 260, className: 'custom-popup' });
     
     layer.on('mouseover', function() { this.setStyle({ fillOpacity: 0.7 }); });
     layer.on('mouseout', function() { this.setStyle({ fillOpacity: 0.4 }); });

@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { CONFIG } from './config.js';
+import { ThemeManager } from './theme.js';
 
 export function updateMapLegend() {
     const legendItems = document.getElementById('legend-items');
@@ -56,15 +57,10 @@ function appendOutlookLegend(container, layerInfo) {
     ];
 
     sigLevels.filter(sig => active.includes(sig.key)).forEach(sig => {
-        const isTornado = layerInfo.key.includes('torn');
-        const isWind = layerInfo.key.includes('wind');
-        const isHail = layerInfo.key.includes('hail');
-
-        const label = isTornado ? (sig.key === 'CIG1' ? 'EF2 - EF3 Tornadoes Possible' : sig.key === 'CIG2' ? 'EF4 Tornadoes Possible' : 'EF5 Tornadoes Possible') :
-                      isWind ? (sig.key === 'CIG1' ? '75 - 84 MPH Wind Gusts' : sig.key === 'CIG2' ? '85 - 99 MPH Wind Gusts (Destructive)' : '100+ MPH Wind Gusts (Extreme)') :
-                      isHail ? (sig.key === 'CIG1' ? '2.0" - 2.9" Hail (Egg to Baseball)' : sig.key === 'CIG2' ? '3.0" - 3.9" Hail (Tea Cup to Softball)' : '4.0"+ Hail (Grapefruit size+)') : 
-                      sig.label;
-
+        const type = layerInfo.key.includes('torn') ? 'TORNADO' : 
+                     layerInfo.key.includes('wind') ? 'WIND' : 'HAIL';
+        
+        const label = CONFIG.sigDescriptions[type][sig.key];
         const pattern = ThemeManager.getSigPattern(sig.key);
         const item = createLegendItem(label, pattern, '', false, null, true);
         container.appendChild(item);

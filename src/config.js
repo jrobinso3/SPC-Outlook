@@ -61,14 +61,22 @@ export const CONFIG = {
         'DEFAULT': '#3b82f6'
     },
     alertsApi: 'https://api.weather.gov/alerts/active',
-    // DO NOT ALTER OR REPLACE THIS ENDPOINT URL.
-    // The NWS API omits watch geometries, and alternative endpoints often lack the required fields.
-    // This specific ArcGIS FeatureServer endpoint correctly provides Event, Summary, Description, and Instruction.
     watchPolygonsApi: 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/6',
-    alertColors: {
-        'Tornado Warning': '#ff0000',
-        'Tornado Watch': '#ffff00',
-        'Severe Thunderstorm Warning': '#ffa500',
-        'Severe Thunderstorm Watch': '#db7093'
+    sigDescriptions: {
+        TORNADO: {
+            'CIG1': 'EF2 - EF3 Tornadoes Possible',
+            'CIG2': 'EF4 Tornadoes Possible',
+            'CIG3': 'EF5 Tornadoes Possible'
+        },
+        WIND: {
+            'CIG1': '75 - 84 MPH Wind Gusts',
+            'CIG2': '85 - 99 MPH Wind Gusts (Destructive)',
+            'CIG3': '100+ MPH Wind Gusts (Extreme)'
+        },
+        HAIL: {
+            'CIG1': '2.0" - 2.9" Hail (Egg to Baseball)',
+            'CIG2': '3.0" - 3.9" Hail (Tea Cup to Softball)',
+            'CIG3': '4.0"+ Hail (Grapefruit size+)'
+        }
     }
 };
