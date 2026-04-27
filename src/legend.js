@@ -42,13 +42,17 @@ function appendOutlookLegend(container, layerInfo) {
         ? ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH']
         : layerInfo.key.includes('torn')
             ? ['2%', '5%', '10%', '15%', '30%', '45%', '60%']
-            : ['5%', '15%', '30%', '45%', '60%', '75%', '90%'];
+            : (layerInfo.key.includes('day4') || layerInfo.key.includes('day5'))
+                ? ['15%', '30%']
+                : ['5%', '15%', '30%', '45%', '60%', '75%', '90%'];
 
     let colorSet = CONFIG.colors.categorical;
     if (layerInfo.key.includes('torn')) {
         colorSet = CONFIG.colors.tornado;
     } else if (layerInfo.key.includes('hail')) {
         colorSet = CONFIG.colors.hail;
+    } else if (layerInfo.key.includes('day4') || layerInfo.key.includes('day5')) {
+        colorSet = CONFIG.colors.extended;
     } else if (layerInfo.key.includes('wind') || layerInfo.key.includes('prob')) {
         colorSet = CONFIG.colors.wind;
     }

@@ -80,8 +80,10 @@ function getFeatureStyle(feature, layerInfo) {
         colorSet = CONFIG.colors.hail;
     } else if (layerInfo.key.includes('wind')) {
         colorSet = CONFIG.colors.wind;
+    } else if (layerInfo.key.includes('day4') || layerInfo.key.includes('day5')) {
+        colorSet = CONFIG.colors.extended;
     } else if (layerInfo.key.includes('prob')) {
-        colorSet = CONFIG.colors.wind; // Use wind colors as default for Day 3+ total severe
+        colorSet = CONFIG.colors.wind; // Use wind colors as default for Day 3 total severe
     }
 
     const color = colorSet[label] || CONFIG.colors['DEFAULT'];
@@ -120,14 +122,24 @@ function onEachFeature(feature, layer, layerInfo) {
     const label = (props.label || props.LABEL || '').toUpperCase();
     const label2 = props.label2 || props.LABEL_2 || 'Convective Outlook Area';
     const valid = props.valid || props.VALID || 'N/A';
+    const expire = props.expire || props.EXPIRE || 'N/A';
     const readableValid = formatSPCDate(valid);
+    const readableExpire = formatSPCDate(expire);
+
+    let colorSetPopup = CONFIG.colors.categorical;
+    if (layerInfo.key.includes('torn')) colorSetPopup = CONFIG.colors.tornado;
+    else if (layerInfo.key.includes('hail')) colorSetPopup = CONFIG.colors.hail;
+    else if (layerInfo.key.includes('wind')) colorSetPopup = CONFIG.colors.wind;
+    else if (layerInfo.key.includes('day4') || layerInfo.key.includes('day5')) colorSetPopup = CONFIG.colors.extended;
+    else if (layerInfo.key.includes('prob')) colorSetPopup = CONFIG.colors.wind;
+
+    const color = colorSetPopup[label] || CONFIG.colors.DEFAULT;
 
     const content = `
         <div class="popup-content">
-            <h4 class="text-lg font-bold mb-1" style="color: ${CONFIG.colors[label] || '#fff'}">${label || 'Outlook'}</h4>
-            <p class="text-xs text-slate-300 mb-2">${label2}</p>
+            <h4 class="text-lg font-bold mb-2" style="color: ${color}">${label2}</h4>
             <hr class="my-2 border-white/10">
-            <div class="mb-3 text-[10px] text-slate-400">Expires: ${readableValid}</div>
+            <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
             <button class="view-discussion-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
                 View Technical Discussion
             </button>

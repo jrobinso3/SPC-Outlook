@@ -54,6 +54,10 @@ export const CONFIG = {
             '0.75': '#3b82f6', '75%': '#3b82f6',
             '0.90': '#00ffff', '90%': '#00ffff'
         },
+        extended: {
+            '0.15': '#ffff99', '15%': '#ffff99',
+            '0.30': '#e6c28c', '30%': '#e6c28c'
+        },
         'DEFAULT': '#3b82f6'
     },
     alertsApi: 'https://api.weather.gov/alerts/active',

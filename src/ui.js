@@ -173,7 +173,8 @@ export async function renderOutlookList() {
         'Today': CONFIG.layers.filter(l => l.key.startsWith('day1')),
         [getDayName(1)]: CONFIG.layers.filter(l => l.key.startsWith('day2')),
         [getDayName(2)]: CONFIG.layers.filter(l => l.key.startsWith('day3')),
-        'Extended': CONFIG.layers.filter(l => l.key.startsWith('day4') || l.key.startsWith('day5'))
+        [getDayName(3)]: CONFIG.layers.filter(l => l.key.startsWith('day4')),
+        [getDayName(4)]: CONFIG.layers.filter(l => l.key.startsWith('day5'))
     };
 
     for (const [groupName, layers] of Object.entries(groups)) {
