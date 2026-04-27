@@ -48,20 +48,21 @@ export function initMap() {
         fadeAnimation: false
     }).addTo(state.map);
 
-    // Major Roads overlay (Top)
+    // Major Roads overlay (From Esri: Shields and Street Names)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
         pane: 'labelsPane',
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
+        attribution: 'Tiles &copy; Esri',
         maxZoom: 20,
-        opacity: 1,
+        opacity: 0.8,
         fadeAnimation: false
     }).addTo(state.map);
 
-    // City & Place Labels (Absolute Top)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+    // Synchronized City & Town Labels (Complementary to the roads layer)
+    L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
         pane: 'labelsPane',
-        subdomains: 'abcd',
+        attribution: 'Tiles &copy; Esri',
         maxZoom: 20,
+        maxNativeZoom: 16,
         opacity: 1.0,
         fadeAnimation: false
     }).addTo(state.map);
