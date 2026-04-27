@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { getFirstLabelLayerId } from './map.js';
+import { getLayerAnchor } from './map.js';
 
 export const animationState = {
     frames: [],
@@ -40,7 +40,7 @@ async function startAnimation() {
 
     const station = state.activeRadarId.toLowerCase();
     const layerName = `${station}_${state.currentRadarProduct}`;
-    const beforeId = getFirstLabelLayerId(map);
+    const beforeId = getLayerAnchor('radar');
 
     // Fetch timestamps
     const cutoff = Date.now() - animationState.windowMinutes * 60 * 1000;

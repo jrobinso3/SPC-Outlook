@@ -3,7 +3,7 @@ import { CONFIG } from './config.js';
 import { updateMapLegend } from './legend.js';
 import { DataProvider } from './api.js';
 import { ThemeManager } from './theme.js';
-import { getFirstLabelLayerId } from './map.js';
+import { getLayerAnchor } from './map.js';
 
 export async function loadLiveAlerts() {
     const map = state.map;
@@ -36,7 +36,7 @@ export async function loadLiveAlerts() {
         const data = await response.json();
         if (!data || !data.features) return;
 
-        const beforeId = getFirstLabelLayerId(map);
+        const beforeId = getLayerAnchor('alerts');
 
         // 1. Process Watches via DataProvider
         let watchData = { type: 'FeatureCollection', features: [] };
@@ -49,6 +49,8 @@ export async function loadLiveAlerts() {
         if (state.showWatches && watchData.features.length > 0) {
             map.addSource('watches-src', { type: 'geojson', data: watchData });
             
+            const watchAnchor = getLayerAnchor('watches');
+
             map.addLayer({
                 id: 'watches-fill',
                 type: 'fill',
@@ -61,7 +63,7 @@ export async function loadLiveAlerts() {
                     ],
                     'fill-opacity': 0.4
                 }
-            }, beforeId);
+            }, watchAnchor);
 
             map.addLayer({
                 id: 'watches-border',
@@ -75,7 +77,7 @@ export async function loadLiveAlerts() {
                     ],
                     'line-width': 2
                 }
-            }, beforeId);
+            }, watchAnchor);
         }
 
         // 2. Process Warnings
@@ -83,6 +85,8 @@ export async function loadLiveAlerts() {
         if (state.showAlerts && warningFeatures.length > 0) {
             map.addSource('alerts-src', { type: 'geojson', data: { type: 'FeatureCollection', features: warningFeatures } });
             
+            const warningAnchor = getLayerAnchor('warnings');
+
             map.addLayer({
                 id: 'alerts-fill',
                 type: 'fill',
@@ -96,7 +100,7 @@ export async function loadLiveAlerts() {
                     ],
                     'fill-opacity': 0.4
                 }
-            }, beforeId);
+            }, warningAnchor);
 
             map.addLayer({
                 id: 'alerts-border',
@@ -111,7 +115,7 @@ export async function loadLiveAlerts() {
                     ],
                     'line-width': 2.5
                 }
-            }, beforeId);
+            }, warningAnchor);
 
             // Special handling for PDS / Emergency is skipped for now or done via separate layer
         }
@@ -124,7 +128,6 @@ export async function loadLiveAlerts() {
         state.alertCounts = counts;
         state.activeAlertTypes = Object.keys(counts);
         
-        setupAlertInteractions();
         updateMapLegend();
         
     } catch (error) {
@@ -132,39 +135,27 @@ export async function loadLiveAlerts() {
     }
 }
 
-function setupAlertInteractions() {
+/**
+ * Handles clicks on alert layers (Warnings/Watches)
+ */
+export function handleAlertClick(e, feature) {
     const map = state.map;
+    const p = feature.properties;
+    const style = ThemeManager.getAlertStyle({ properties: p });
+    const color = style.fillColor;
 
-    ['alerts-fill', 'watches-fill'].forEach(layerId => {
-        if (!map.getLayer(layerId)) return;
+    const content = `
+        <div class="popup-content max-h-80 overflow-y-auto pr-1">
+            <h4 class="text-lg font-bold mb-1" style="color: ${color}">${p.event}</h4>
+            <p class="text-xs text-slate-300 mb-2">${p.headline || 'Active Alert'}</p>
+            <hr class="my-2 border-white/10">
+            <div class="text-[10px] text-slate-300 leading-normal mb-3 whitespace-pre-wrap">${p.description || ''}</div>
+            <div class="text-[10px] text-slate-400 font-mono">Expires: ${new Date(p.expires).toLocaleString()}</div>
+        </div>
+    `;
 
-        map.on('click', layerId, (e) => {
-            if (!e.features.length) return;
-            const p = e.features[0].properties;
-            const style = ThemeManager.getAlertStyle({ properties: p });
-            const color = style.fillColor;
-
-            const content = `
-                <div class="popup-content max-h-80 overflow-y-auto pr-1">
-                    <h4 class="text-lg font-bold mb-1" style="color: ${color}">${p.event}</h4>
-                    <p class="text-xs text-slate-300 mb-2">${p.headline || 'Active Warning'}</p>
-                    <hr class="my-2 border-white/10">
-                    <div class="text-[10px] text-slate-300 leading-normal mb-3 whitespace-pre-wrap">${p.description || ''}</div>
-                    <div class="text-[10px] text-slate-400">Valid Until: ${new Date(p.expires).toLocaleString()}</div>
-                </div>
-            `;
-
-            new maplibregl.Popup({ className: 'custom-popup', maxWidth: '260px' })
-                .setLngLat(e.lngLat)
-                .setHTML(content)
-                .addTo(map);
-        });
-
-        map.on('mouseenter', layerId, () => {
-            map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', layerId, () => {
-            map.getCanvas().style.cursor = '';
-        });
-    });
+    new maplibregl.Popup({ className: 'custom-popup', maxWidth: '280px' })
+        .setLngLat(e.lngLat)
+        .setHTML(content)
+        .addTo(map);
 }

@@ -1,7 +1,7 @@
 import { state, saveAppState } from './state.js';
 import { CONFIG } from './config.js';
 import { stopAnimation, animationState, toggleRadarAnimation } from './radar-animation.js';
-import { getFirstLabelLayerId } from './map.js';
+import { getLayerAnchor } from './map.js';
 
 export async function fetchRadarSites() {
     try {
@@ -66,18 +66,6 @@ export function initRadarMarkers() {
             'text-halo-width': 1
         }
     });
-
-    map.on('click', 'radar-sites', (e) => {
-        const siteId = e.features[0].properties.id;
-        loadRadar(siteId);
-    });
-
-    map.on('mouseenter', 'radar-sites', () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'radar-sites', () => {
-        map.getCanvas().style.cursor = '';
-    });
 }
 
 export function loadRadar(stationId, isHeartbeat = false) {
@@ -94,7 +82,7 @@ export function loadRadar(stationId, isHeartbeat = false) {
     if (map.getLayer('radar-raster')) map.removeLayer('radar-raster');
     if (map.getSource('radar-src')) map.removeSource('radar-src');
 
-    const beforeId = getFirstLabelLayerId(map);
+    const beforeId = getLayerAnchor('radar');
 
     // Formulate WMS URL for MapLibre
     const wmsUrl = `https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${layerName}&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&WIDTH=256&HEIGHT=256&CRS=EPSG:3857&BBOX={bbox-epsg-3857}`;

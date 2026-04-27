@@ -4,7 +4,7 @@ import { formatSPCDate, cleanDiscussionText } from './utils.js';
 import { updateMapLegend } from './legend.js';
 import { ThemeManager } from './theme.js';
 import { DataProvider } from './api.js';
-import { getFirstLabelLayerId } from './map.js';
+import { getLayerAnchor } from './map.js';
 
 export async function switchOutlook(layerInfo) {
     const map = state.map;
@@ -22,7 +22,7 @@ export async function switchOutlook(layerInfo) {
         const probData = await DataProvider.fetchOutlook(layerInfo.id);
         if (!probData) return;
 
-        const beforeId = getFirstLabelLayerId(map);
+        const beforeId = getLayerAnchor('outlooks');
 
         map.addSource('outlooks', {
             type: 'geojson',
@@ -90,55 +90,47 @@ export async function switchOutlook(layerInfo) {
             }
         }
 
-        // 3. Setup Click Handlers (Popups)
-        setupOutlookInteractions(layerInfo);
-
+        // 3. Setup Click Handlers (Popups) - Handled centrally by map.js
         updateMapLegend();
     } catch (error) {
         console.error(`Error switching outlook to ${layerInfo.name}:`, error);
     }
 }
 
-function setupOutlookInteractions(layerInfo) {
+/**
+ * Handles clicks on outlook layers
+ */
+export function handleOutlookClick(e, feature) {
     const map = state.map;
+    const layerInfo = CONFIG.layers.find(l => l.key === state.currentOutlookKey);
+    if (!layerInfo) return;
 
-    map.on('click', 'outlook-fill', (e) => {
-        if (!e.features.length) return;
-        const p = e.features[0].properties;
-        const color = ThemeManager.getColor(layerInfo.key, p.displayLabel);
-        const readableValid = formatSPCDate(p.valid);
-        const readableExpire = formatSPCDate(p.expire);
+    const p = feature.properties;
+    const color = ThemeManager.getColor(layerInfo.key, p.displayLabel);
+    const readableValid = formatSPCDate(p.valid);
+    const readableExpire = formatSPCDate(p.expire);
 
-        const content = `
-            <div class="popup-content">
-                <h4 class="text-lg font-bold mb-2" style="color: ${color}">${p.label2}</h4>
-                <hr class="my-2 border-white/10">
-                <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
-                <button id="spc-discussion-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
-                    View Technical Discussion
-                </button>
-            </div>
-        `;
+    const content = `
+        <div class="popup-content">
+            <h4 class="text-lg font-bold mb-2" style="color: ${color}">${p.label2 || 'SPC Outlook'}</h4>
+            <hr class="my-2 border-white/10">
+            <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
+            <button id="spc-discussion-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
+                View Technical Discussion
+            </button>
+        </div>
+    `;
 
-        new maplibregl.Popup({ className: 'custom-popup', maxWidth: '220px' })
-            .setLngLat(e.lngLat)
-            .setHTML(content)
-            .addTo(map);
+    new maplibregl.Popup({ className: 'custom-popup', maxWidth: '220px' })
+        .setLngLat(e.lngLat)
+        .setHTML(content)
+        .addTo(map);
 
-        // Handle discussion button click
-        setTimeout(() => {
-            const btn = document.getElementById('spc-discussion-btn');
-            if (btn) btn.onclick = () => showDiscussion(layerInfo.discussion, p.valid);
-        }, 0);
-    });
-
-    // Hover effects
-    map.on('mouseenter', 'outlook-fill', () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'outlook-fill', () => {
-        map.getCanvas().style.cursor = '';
-    });
+    // Handle discussion button click
+    setTimeout(() => {
+        const btn = document.getElementById('spc-discussion-btn');
+        if (btn) btn.onclick = () => showDiscussion(layerInfo.discussion, p.valid);
+    }, 0);
 }
 
 async function showDiscussion(type, baseDateStr) {

@@ -23,5 +23,8 @@
   "license": "MIT",
   "devDependencies": {
     "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "@americana/maplibre-shield-generator": "^0.1.1"
   }
 }

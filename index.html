@@ -145,21 +145,21 @@
             transform: translateX(14px);
         }
 
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 0.25rem;
+        /* Global Custom Scrollbars */
+        *::-webkit-scrollbar {
+            width: 5px;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-track {
+        *::-webkit-scrollbar-track {
             background: transparent;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb {
+        *::-webkit-scrollbar-thumb {
             background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
+            border-radius: 99px;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        *::-webkit-scrollbar-thumb:hover {
             background-color: rgba(255, 255, 255, 0.2);
         }
 
@@ -209,17 +209,33 @@
             );
         }
 
-        /* Custom Popup Styles */
-        .leaflet-popup-content-wrapper {
-            background: rgba(20, 24, 33, 0.95) !important;
-            backdrop-filter: blur(12px);
-            color: white !important;
-            border-radius: 12px !important;
+        /* MapLibre Popup Styles */
+        .maplibregl-popup-content {
+            background: rgba(11, 14, 20, 0.9) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: #f1f5f9 !important;
+            border-radius: 1rem !important;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            padding: 1.25rem !important;
         }
 
-        .leaflet-popup-tip {
-            background: rgba(20, 24, 33, 0.95) !important;
+        .maplibregl-popup-tip {
+            border-top-color: rgba(11, 14, 20, 0.9) !important;
+            border-bottom-color: rgba(11, 14, 20, 0.9) !important;
+        }
+
+        .maplibregl-popup-close-button {
+            color: #94a3b8;
+            padding: 8px;
+            font-size: 18px;
+            outline: none !important;
+        }
+
+        .maplibregl-popup-close-button:hover {
+            color: white;
+            background: transparent;
         }
 
         .confirmed-tor {
