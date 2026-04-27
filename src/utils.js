@@ -1,3 +1,5 @@
+import { CONFIG } from './config.js';
+
 /**
  * Utility functions for data processing and formatting
  */
@@ -103,3 +105,26 @@ export async function fetchGeoJSON(url) {
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return await response.json();
 }
+
+/**
+ * Date and time utilities
+ */
+export function getDayName(offset) {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return dayNames[d.getDay()];
+}
+
+export function updateDynamicLabels() {
+    const now = new Date();
+    CONFIG.layers.forEach(layer => {
+        const match = layer.name.match(/Day (\d+)/i);
+        if (match) {
+            const targetDate = new Date();
+            targetDate.setDate(now.getDate() + (parseInt(match[1]) - 1));
+            layer.name = layer.name.replace(/Day \d+/i, `${getDayName(parseInt(match[1]) - 1)}'s`);
+        }
+    });
+}
+

@@ -1,18 +1,19 @@
 import { state } from './state.js';
 import { CONFIG } from './config.js';
-import { fetchGeoJSON, formatSPCDate, cleanDiscussionText } from './utils.js';
+import { formatSPCDate, cleanDiscussionText } from './utils.js';
 import { updateMapLegend } from './legend.js';
+import { ThemeManager } from './theme.js';
+import { DataProvider } from './api.js';
 
 export async function switchOutlook(layerInfo) {
     if (state.activeLayer) state.map.removeLayer(state.activeLayer);
     
     try {
-        // Create a group to hold both Prob and SIG (hatching) layers
         const outlookGroup = L.layerGroup();
         
-        // 1. Fetch main probabilistic/categorical data
-        const probUrl = `${CONFIG.apiBase}/${layerInfo.id}/query?where=1%3D1&outFields=*&f=geojson`;
-        const probData = await fetchGeoJSON(probUrl);
+        // 1. Fetch main probabilistic/categorical data via DataProvider
+        const probData = await DataProvider.fetchOutlook(layerInfo.id);
+        if (!probData) return;
         
         const probLayer = L.geoJSON(probData, {
             style: (f) => getFeatureStyle(f, layerInfo),
@@ -21,38 +22,24 @@ export async function switchOutlook(layerInfo) {
         });
         outlookGroup.addLayer(probLayer);
 
+        // Extract active categories for legend
         state.activeOutlookCategories = [...new Set(
-            probData.features.map(f => {
-                const l = f.properties.label || f.properties.LABEL || '';
-                if (!l) return null;
-                // If it's a decimal like 0.02, 0.15, etc.
-                if (!isNaN(l) && parseFloat(l) > 0 && parseFloat(l) < 1) {
-                    return Math.round(parseFloat(l) * 100) + '%';
-                }
-                // If it's a number string like "15", "30"
-                if (!isNaN(l) && parseInt(l) >= 1) {
-                    return parseInt(l) + '%';
-                }
-                return l.toUpperCase();
-            }).filter(Boolean)
+            probData.features.map(f => f.properties.displayLabel).filter(Boolean)
         )];
 
-        // 2. Fetch SIG (Intensity/Hatching) data if applicable
+        // 2. Fetch SIG (Intensity/Hatching) data
         if (layerInfo.sigLayerId) {
             try {
-                const sigUrl = `${CONFIG.apiBase}/${layerInfo.sigLayerId}/query?where=label+IN+('CIG1','CIG2','CIG3')&outFields=*&f=geojson`;
-                const sigData = await fetchGeoJSON(sigUrl);
-                
-                if (sigData.features.length > 0) {
+                const sigData = await DataProvider.fetchSigData(layerInfo.sigLayerId);
+                if (sigData && sigData.features.length > 0) {
                     const sigLayer = L.geoJSON(sigData, {
                         style: getSigStyle,
                         pane: 'sigPane',
-                        interactive: false // Let the prob layer handle interactions
+                        interactive: false
                     });
                     outlookGroup.addLayer(sigLayer);
                     
-                    // Add SIG levels to active categories for legend
-                    const sigCats = sigData.features.map(f => f.properties.label || f.properties.LABEL).filter(Boolean);
+                    const sigCats = sigData.features.map(f => f.properties.label).filter(Boolean);
                     state.activeOutlookCategories.push(...sigCats);
                 }
             } catch (e) {
@@ -70,23 +57,7 @@ export async function switchOutlook(layerInfo) {
 }
 
 function getFeatureStyle(feature, layerInfo) {
-    const props = feature.properties;
-    const label = (props.label || props.LABEL || '').toUpperCase();
-    
-    let colorSet = CONFIG.colors.categorical;
-    if (layerInfo.key.includes('torn')) {
-        colorSet = CONFIG.colors.tornado;
-    } else if (layerInfo.key.includes('hail')) {
-        colorSet = CONFIG.colors.hail;
-    } else if (layerInfo.key.includes('wind')) {
-        colorSet = CONFIG.colors.wind;
-    } else if (layerInfo.key.includes('day4') || layerInfo.key.includes('day5')) {
-        colorSet = CONFIG.colors.extended;
-    } else if (layerInfo.key.includes('prob')) {
-        colorSet = CONFIG.colors.wind; // Use wind colors as default for Day 3 total severe
-    }
-
-    const color = colorSet[label] || CONFIG.colors['DEFAULT'];
+    const color = ThemeManager.getColor(layerInfo.key, feature.properties.displayLabel);
     
     return {
         fillColor: color,
@@ -98,18 +69,8 @@ function getFeatureStyle(feature, layerInfo) {
 }
 
 function getSigStyle(feature) {
-    const props = feature.properties;
-    const label = (props.label || props.LABEL || '').toUpperCase();
-    
-    // Map CIG labels to our SVG patterns
-    const patternMap = {
-        'CIG1': 'url(#pattern-cig1)',
-        'CIG2': 'url(#pattern-cig2)',
-        'CIG3': 'url(#pattern-cig3)'
-    };
-
     return {
-        fillColor: patternMap[label] || 'transparent',
+        fillColor: ThemeManager.getSigPattern(feature.properties.label),
         fillOpacity: 1,
         weight: 2,
         color: 'rgba(0,0,0,0.8)',
@@ -118,26 +79,14 @@ function getSigStyle(feature) {
 }
 
 function onEachFeature(feature, layer, layerInfo) {
-    const props = feature.properties;
-    const label = (props.label || props.LABEL || '').toUpperCase();
-    const label2 = props.label2 || props.LABEL_2 || 'Convective Outlook Area';
-    const valid = props.valid || props.VALID || 'N/A';
-    const expire = props.expire || props.EXPIRE || 'N/A';
-    const readableValid = formatSPCDate(valid);
-    const readableExpire = formatSPCDate(expire);
-
-    let colorSetPopup = CONFIG.colors.categorical;
-    if (layerInfo.key.includes('torn')) colorSetPopup = CONFIG.colors.tornado;
-    else if (layerInfo.key.includes('hail')) colorSetPopup = CONFIG.colors.hail;
-    else if (layerInfo.key.includes('wind')) colorSetPopup = CONFIG.colors.wind;
-    else if (layerInfo.key.includes('day4') || layerInfo.key.includes('day5')) colorSetPopup = CONFIG.colors.extended;
-    else if (layerInfo.key.includes('prob')) colorSetPopup = CONFIG.colors.wind;
-
-    const color = colorSetPopup[label] || CONFIG.colors.DEFAULT;
+    const p = feature.properties;
+    const color = ThemeManager.getColor(layerInfo.key, p.displayLabel);
+    const readableValid = formatSPCDate(p.valid);
+    const readableExpire = formatSPCDate(p.expire);
 
     const content = `
         <div class="popup-content">
-            <h4 class="text-lg font-bold mb-2" style="color: ${color}">${label2}</h4>
+            <h4 class="text-lg font-bold mb-2" style="color: ${color}">${p.label2}</h4>
             <hr class="my-2 border-white/10">
             <div class="mb-3 text-[10px] text-slate-400">Valid: ${readableValid} - ${readableExpire}</div>
             <button class="view-discussion-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer">
@@ -145,35 +94,24 @@ function onEachFeature(feature, layer, layerInfo) {
             </button>
         </div>
     `;
-    layer.bindPopup(content, {
-        className: 'custom-popup',
-        maxWidth: 220
-    });
     
-    layer.on('popupopen', function(e) {
+    layer.bindPopup(content, { className: 'custom-popup', maxWidth: 220 });
+    
+    layer.on('popupopen', (e) => {
         const btn = e.popup.getElement().querySelector('.view-discussion-btn');
-        if (btn) {
-            btn.onclick = (event) => {
-                event.preventDefault();
-                showDiscussion(layerInfo.discussion, valid);
-            };
-        }
+        if (btn) btn.onclick = (ev) => {
+            ev.preventDefault();
+            showDiscussion(layerInfo.discussion, p.valid);
+        };
     });
 
-    layer.on('mouseover', function() {
-        this.setStyle({ fillOpacity: 0.6, weight: 3 });
-    });
-    
-    layer.on('mouseout', function() {
-        this.setStyle({ fillOpacity: 0.35, weight: 1.5 });
-    });
+    layer.on('mouseover', function() { this.setStyle({ fillOpacity: 0.6, weight: 3 }); });
+    layer.on('mouseout', function() { this.setStyle({ fillOpacity: 0.35, weight: 1.5 }); });
 }
-
 
 async function showDiscussion(type, baseDateStr) {
     const sidePanel = document.getElementById('side-panel');
     const body = document.getElementById('discussion-body');
-    
     if (!sidePanel || !body) return;
     
     sidePanel.classList.add('active');
@@ -194,13 +132,10 @@ async function showDiscussion(type, baseDateStr) {
         if (!response.ok) throw new Error('Failed to fetch discussion');
         
         const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+        const pre = new DOMParser().parseFromString(html, 'text/html').querySelector('pre');
         
-        const pre = doc.querySelector('pre');
         if (pre) {
-            const processedText = cleanDiscussionText(pre.innerText, baseDateStr);
-            body.innerHTML = `<pre>${processedText}</pre>`;
+            body.innerHTML = `<pre>${cleanDiscussionText(pre.innerText, baseDateStr)}</pre>`;
         } else {
             body.innerHTML = '<div class="placeholder">Technical discussion text not found for this product.</div>';
         }
@@ -209,3 +144,4 @@ async function showDiscussion(type, baseDateStr) {
         body.innerHTML = '<div class="placeholder">Error loading discussion. Please try again later.</div>';
     }
 }
+
