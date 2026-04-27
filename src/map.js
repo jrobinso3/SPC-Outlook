@@ -7,7 +7,7 @@ import { switchOutlook } from './outlooks.js';
 
 export function initMap() {
     const savedState = loadAppState();
-    
+
     const startCenter = savedState?.center || CONFIG.mapCenter;
     const startZoom = savedState?.zoom || CONFIG.initialZoom;
 
@@ -20,7 +20,7 @@ export function initMap() {
     state.map.getPane('outlookPane').style.zIndex = 350;
 
     state.map.createPane('sigPane');
-    state.map.getPane('sigPane').style.zIndex = 600;
+    state.map.getPane('sigPane').style.zIndex = 360;
     state.map.getPane('sigPane').style.pointerEvents = 'none';
 
     state.map.createPane('watchPane');
@@ -30,7 +30,7 @@ export function initMap() {
     state.map.getPane('radarPane').style.zIndex = 450;
 
     state.map.createPane('alertPane');
-    state.map.getPane('alertPane').style.zIndex = 550;
+    state.map.getPane('alertPane').style.zIndex = 550; // Warnings
 
     state.map.createPane('labelsPane');
     state.map.getPane('labelsPane').style.zIndex = 650;
@@ -53,7 +53,7 @@ export function initMap() {
         pane: 'labelsPane',
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
         maxZoom: 20,
-        opacity: 0.65,
+        opacity: 1,
         fadeAnimation: false
     }).addTo(state.map);
 
@@ -62,7 +62,7 @@ export function initMap() {
         pane: 'labelsPane',
         subdomains: 'abcd',
         maxZoom: 20,
-        opacity: 0.8,
+        opacity: 1.0,
         fadeAnimation: false
     }).addTo(state.map);
 
@@ -72,30 +72,30 @@ export function initMap() {
     fetchRadarSites();
     loadLiveAlerts();
 
-     // Auto-switch radar based on map center
-     let moveTimeout;
-     state.map.on('move', () => {
-         clearTimeout(moveTimeout);
-         moveTimeout = setTimeout(() => {
-             findNearestRadar();
-             saveAppState();
-         }, 250);
-     });
-     
-     initUIListeners();
+    // Auto-switch radar based on map center
+    let moveTimeout;
+    state.map.on('move', () => {
+        clearTimeout(moveTimeout);
+        moveTimeout = setTimeout(() => {
+            findNearestRadar();
+            saveAppState();
+        }, 250);
+    });
 
-     // Initial Outlook Load
-     if (state.showOutlooks) {
+    initUIListeners();
+
+    // Initial Outlook Load
+    if (state.showOutlooks) {
         const defaultLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey) || CONFIG.layers[0];
         if (defaultLayer) switchOutlook(defaultLayer);
-     }
+    }
 
     // Heartbeats
     setInterval(() => {
         if (state.showRadar && state.activeRadarId) {
             loadRadar(state.activeRadarId, true);
         }
-    }, 30000); 
+    }, 30000);
 
     setInterval(() => {
         if (state.showAlerts || state.showWatches) {
@@ -119,19 +119,33 @@ export function locateUser() {
         (position) => {
             const { latitude, longitude } = position.coords;
             state.map.setView([latitude, longitude], 9);
-            
+
             // Add a small pulse marker for the user's location
             if (state.userMarker) state.map.removeLayer(state.userMarker);
-            
+
             state.userMarker = L.circleMarker([latitude, longitude], {
-                radius: 8,
+                radius: 7,
                 fillColor: '#3b82f6',
                 color: '#fff',
-                weight: 2,
+                weight: 3,
                 opacity: 1,
-                fillOpacity: 0.8,
+                fillOpacity: 1,
                 pane: 'labelsPane'
             }).addTo(state.map);
+
+            // Optional: Add a subtle outer pulse halo
+            const pulse = L.circleMarker([latitude, longitude], {
+                radius: 15,
+                fillColor: '#3b82f6',
+                color: 'transparent',
+                weight: 0,
+                opacity: 0,
+                fillOpacity: 0.2,
+                pane: 'labelsPane'
+            }).addTo(state.map);
+            
+            // Clean up pulse if marker is removed
+            state.userMarker.on('remove', () => state.map.removeLayer(pulse));
 
             btn.classList.remove('text-blue-500', 'animate-pulse');
         },
@@ -165,7 +179,7 @@ function initHatchingPatterns() {
         defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         svg.insertBefore(defs, svg.firstChild);
     }
-    
+
     // CIG1: Light Hatch (Single Slant)
     // CIG2: Med Hatch (Denser Slant)
     // CIG3: Double Hatch (Cross-Hatch)
