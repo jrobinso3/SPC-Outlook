@@ -29,7 +29,7 @@ export async function initMap() {
 
 
 
-    state.map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    // state.map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     state.map.on('load', () => {
         fetchRadarSites();
