@@ -84,9 +84,9 @@ export const CONFIG = {
     theme: {
         background: '#0b0e14',
         fonts: {
-            main: 'Noto Sans Regular',
-            bold: 'Noto Sans Bold',
-            ui:   'Outfit'
+            main: 'Oswald Regular',
+            bold: 'Oswald Bold',
+            ui:   'Oswald'
         },
         roads: {
             motorway:  '#3d4f63',
@@ -98,13 +98,13 @@ export const CONFIG = {
             casing:    '#070b12'
         },
         labels: {
-            capital: { color: '#f1f5f9', size: 14, halo: '#0b0e14' },
-            city:    { color: '#e2e8f0', size: 12, halo: '#0b0e14' },
-            town:    { color: '#94a3b8', size: 11, halo: '#0b0e14' },
-            village: { color: '#64748b', size: 10, halo: '#0b0e14' },
-            state:   { color: '#3d5470', size: 12, halo: '#0b0e14' },
-            country: { color: '#2d4060', size: 14, halo: '#0b0e14' },
-            water:   { color: '#1a3a5c', size: 10, halo: '#0b0e14' }
+            capital: { color: '#ffffff', size: 18, halo: '#0b0e14' },
+            city:    { color: '#ffffff', size: 16, halo: '#0b0e14' },
+            town:    { color: '#f1f5f9', size: 16, halo: '#0b0e14' },
+            village: { color: '#e2e8f0', size: 15, halo: '#0b0e14' },
+            state:   { color: '#cbd5e1', size: 16, halo: '#0b0e14' },
+            country: { color: '#cbd5e1', size: 18, halo: '#0b0e14' },
+            water:   { color: '#94a3b8', size: 15, halo: '#0b0e14' }
         },
         visibility: {
             cityPoints: false,

@@ -155,11 +155,14 @@ export const ThemeManager = {
 
                 // ── Symbol layers (Labels) ──────────────────────────────────
                 if (type === 'symbol') {
+                    // Set default font for all labels
+                    try { map.setLayoutProperty(id, 'text-font', [t.fonts.main]); } catch(_) {}
+
                     // Highway shields
                     if (lo.includes('shield') || (lo.includes('road') && lo.includes('label')) || (lo.includes('highway') && lo.includes('label'))) {
                         map.setPaintProperty(id, 'text-color', '#ffffff');
                         map.setPaintProperty(id, 'text-halo-color', 'rgba(0,0,0,0)');
-                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 7, 9, 10, 10, 14, 12]);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 7, 14, 10, 15, 14, 18]);
                         try { map.setLayoutProperty(id, 'text-font', [t.fonts.main]); } catch(_) {}
 
                     } else if (lo.includes('country') || lo.includes('continent')) {
