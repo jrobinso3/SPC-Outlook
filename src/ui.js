@@ -21,16 +21,20 @@ export function initUIListeners() {
     const toggleRadarLayer = document.getElementById('toggle-radar-layer');
     const toggleOutlooks = document.getElementById('toggle-outlooks');
     const toggleWatches = document.getElementById('toggle-watches');
+    const toggleRadarSites = document.getElementById('toggle-radar-sites');
 
-    locationBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // locateUser needs update for MapLibre
-    });
+    if (locationBtn) {
+        locationBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            locateUser();
+        });
+    }
 
     if (toggleAlerts) toggleAlerts.checked = state.showAlerts;
     if (toggleRadarLayer) toggleRadarLayer.checked = state.showRadar;
     if (toggleOutlooks) toggleOutlooks.checked = state.showOutlooks;
     if (toggleWatches) toggleWatches.checked = state.showWatches;
+    if (toggleRadarSites) toggleRadarSites.checked = state.showRadarSites;
 
     updateDynamicLabels();
     renderOutlookList();
@@ -77,6 +81,15 @@ export function initUIListeners() {
         saveAppState();
     });
 
+    toggleRadarSites?.addEventListener('change', (e) => {
+        state.showRadarSites = e.target.checked;
+        if (!state.radarMarkers) return;
+        state.radarMarkers.forEach(m => {
+            m.getElement().style.display = state.showRadarSites ? 'block' : 'none';
+        });
+        saveAppState();
+    });
+
     // Radar Product Selection
     const productBtns = document.querySelectorAll('.radar-product-btn');
     productBtns.forEach(btn => {
@@ -109,20 +122,31 @@ export function initUIListeners() {
         }
     });
 
-    const toggleRadarBtn = document.getElementById('toggle-radar-sites');
-    toggleRadarBtn?.addEventListener('click', () => {
-        const map = state.map;
-        if (!map.getLayer('radar-sites')) return;
-        const visible = map.getLayoutProperty('radar-sites', 'visibility') !== 'none';
-        map.setLayoutProperty('radar-sites', 'visibility', visible ? 'none' : 'visible');
-        const dot = document.getElementById('radar-sites-status');
-        if (dot) dot.classList.toggle('bg-sky-500', !visible);
-        if (dot) dot.classList.toggle('bg-slate-500', visible);
-    });
+    const playBtns = [
+        document.getElementById('toggle-radar-animation'),
+        document.getElementById('toggle-radar-animation-header')
+    ];
 
-    document.getElementById('toggle-radar-animation')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleRadarAnimation();
+    playBtns.forEach(btn => {
+        btn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // If radar is off, turn it on first
+            if (!state.showRadar) {
+                state.showRadar = true;
+                const toggleRadarLayer = document.getElementById('toggle-radar-layer');
+                if (toggleRadarLayer) toggleRadarLayer.checked = true;
+                
+                if (state.activeRadarId) {
+                    loadRadar(state.activeRadarId);
+                } else {
+                    findNearestRadar(true);
+                }
+                saveAppState();
+            }
+
+            toggleRadarAnimation();
+        });
     });
 }
 

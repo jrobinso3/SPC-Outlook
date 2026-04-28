@@ -104,48 +104,11 @@ export const ThemeManager = {
 
     /**
      * Applies comprehensive dark-theme styling to all basemap vector layers.
-     * Handles road hierarchy, city/town label hierarchy, highway shields,
-     * admin boundaries, and environment fills.
+     * Uses centralized CONFIG.theme for all tokens.
      */
     applyPremiumStyles(map) {
         const layers = map.getStyle().layers;
-
-        const c = {
-            bg:              '#0b0e14',
-            water:           '#060810',
-            park:            '#0d1219',
-            building:        '#0f1520',
-
-            // Road fills — luminance increases with road class
-            motorway:        '#3d4f63',
-            trunk:           '#2e3f52',
-            primary:         '#243347',
-            secondary:       '#1a2638',
-            tertiary:        '#141e2c',
-            minor:           '#0f1724',
-            casing:          '#070b12',
-
-            // Place labels — full hierarchy
-            capital:         '#f1f5f9',  // slate-100
-            cityLarge:       '#e2e8f0',  // slate-200
-            cityMed:         '#cbd5e1',  // slate-300
-            town:            '#94a3b8',  // slate-400
-            village:         '#64748b',  // slate-500
-            hamlet:          '#475569',  // slate-600
-
-            // Road labels / shields
-            shieldText:      '#ffffff',
-            roadLabel:       '#94a3b8',
-
-            // Admin boundaries
-            borderCountry:   '#2d3f52',
-            borderState:     '#1a2633',
-
-            // Water labels
-            waterText:       '#1a3a5c',
-
-            halo:            '#0b0e14',
-        };
+        const t = CONFIG.theme;
 
         layers.forEach(layer => {
             const id   = layer.id;
@@ -153,155 +116,106 @@ export const ThemeManager = {
             const lo   = id.toLowerCase();
 
             try {
-
                 // ── Road lines ──────────────────────────────────────────────
                 if (type === 'line' && (lo.includes('road') || lo.includes('bridge') || lo.includes('tunnel') || lo.includes('highway') || lo.includes('transit'))) {
                     const isCasing = lo.includes('casing') || lo.includes('outline') || lo.includes('border');
 
                     if (lo.includes('motorway') || lo.includes('interstate')) {
-                        map.setPaintProperty(id, 'line-color', isCasing ? c.casing : c.motorway);
+                        map.setPaintProperty(id, 'line-color', isCasing ? t.roads.casing : t.roads.motorway);
                         if (!isCasing) map.setPaintProperty(id, 'line-width',
                             ['interpolate', ['exponential', 1.5], ['zoom'], 4, 0.6, 8, 1.8, 12, 5, 16, 12, 20, 26]);
 
                     } else if (lo.includes('trunk')) {
-                        map.setPaintProperty(id, 'line-color', isCasing ? c.casing : c.trunk);
+                        map.setPaintProperty(id, 'line-color', isCasing ? t.roads.casing : t.roads.trunk);
                         if (!isCasing) map.setPaintProperty(id, 'line-width',
                             ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.5, 9, 1.5, 13, 4, 17, 10]);
 
                     } else if (lo.includes('primary')) {
-                        map.setPaintProperty(id, 'line-color', isCasing ? c.casing : c.primary);
+                        map.setPaintProperty(id, 'line-color', isCasing ? t.roads.casing : t.roads.primary);
                         if (!isCasing) map.setPaintProperty(id, 'line-width',
                             ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.4, 9, 1.2, 13, 3.5, 17, 9]);
 
                     } else if (lo.includes('secondary')) {
-                        map.setPaintProperty(id, 'line-color', isCasing ? c.casing : c.secondary);
+                        map.setPaintProperty(id, 'line-color', isCasing ? t.roads.casing : t.roads.secondary);
                         if (!isCasing) map.setPaintProperty(id, 'line-width',
                             ['interpolate', ['exponential', 1.5], ['zoom'], 6, 0.3, 10, 1, 14, 3, 18, 8]);
 
                     } else if (lo.includes('tertiary')) {
-                        map.setPaintProperty(id, 'line-color', isCasing ? c.casing : c.tertiary);
+                        map.setPaintProperty(id, 'line-color', isCasing ? t.roads.casing : t.roads.tertiary);
                         if (!isCasing) map.setPaintProperty(id, 'line-width',
                             ['interpolate', ['exponential', 1.5], ['zoom'], 8, 0.2, 12, 1, 16, 3.5]);
 
                     } else if (!isCasing) {
-                        // minor / residential / path
-                        map.setPaintProperty(id, 'line-color', c.minor);
+                        map.setPaintProperty(id, 'line-color', t.roads.minor);
                         map.setPaintProperty(id, 'line-opacity', 0.5);
                     } else {
-                        map.setPaintProperty(id, 'line-color', c.casing);
+                        map.setPaintProperty(id, 'line-color', t.roads.casing);
                     }
                 }
 
-                // ── Admin boundaries ────────────────────────────────────────
-                if (type === 'line' && (lo.includes('boundary') || lo.includes('border') || lo.includes('admin'))) {
-                    const isNational = lo.includes('country') || lo.includes('national') || lo.includes('2');
-                    map.setPaintProperty(id, 'line-color', isNational ? c.borderCountry : c.borderState);
-                    map.setPaintProperty(id, 'line-width', isNational ? 1.2 : 0.6);
-                    map.setPaintProperty(id, 'line-opacity', isNational ? 0.9 : 0.55);
-                    if (!isNational) map.setPaintProperty(id, 'line-dasharray', [5, 5]);
-                }
-
-                // ── Symbol layers ───────────────────────────────────────────
+                // ── Symbol layers (Labels) ──────────────────────────────────
                 if (type === 'symbol') {
-
-                    // Highway shields & road number labels
+                    // Highway shields
                     if (lo.includes('shield') || (lo.includes('road') && lo.includes('label')) || (lo.includes('highway') && lo.includes('label'))) {
-                        map.setPaintProperty(id, 'text-color', c.shieldText);
+                        map.setPaintProperty(id, 'text-color', '#ffffff');
                         map.setPaintProperty(id, 'text-halo-color', 'rgba(0,0,0,0)');
-                        map.setPaintProperty(id, 'text-halo-width', 0);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 7, 9, 10, 10, 14, 12]);
-                        map.setLayoutProperty(id, 'visibility', 'visible');
-                        try { map.setPaintProperty(id, 'icon-opacity', 1); } catch(_) {}
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 7, 9, 10, 10, 14, 12]);
+                        try { map.setLayoutProperty(id, 'text-font', [t.fonts.main]); } catch(_) {}
 
-                    // Country / continent labels
                     } else if (lo.includes('country') || lo.includes('continent')) {
-                        map.setPaintProperty(id, 'text-color', '#2d4060');
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2);
+                        map.setPaintProperty(id, 'text-color', t.labels.country.color);
+                        map.setPaintProperty(id, 'text-halo-color', t.labels.country.halo);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 2, t.labels.country.size, 6, t.labels.country.size * 1.5]);
 
-                    // State / province labels
-                    } else if ((lo.includes('state') || lo.includes('province') || lo.includes('region')) && !lo.includes('road') && !lo.includes('highway')) {
-                        map.setPaintProperty(id, 'text-color', '#3d5470');
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 4, 10, 7, 13]);
-                        try { map.setLayoutProperty(id, 'text-transform', 'uppercase'); } catch(_) {}
+                    } else if (lo.includes('state') || lo.includes('province') || lo.includes('region')) {
+                        map.setPaintProperty(id, 'text-color', t.labels.state.color);
+                        map.setPaintProperty(id, 'text-halo-color', t.labels.state.halo);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 4, t.labels.state.size, 7, t.labels.state.size * 1.3]);
 
-                    // Capital cities
                     } else if (lo.includes('capital')) {
-                        map.setPaintProperty(id, 'text-color', c.capital);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 3);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 4, 13, 8, 17, 12, 22]);
-                        try { map.setLayoutProperty(id, 'text-font', ['Noto Sans Bold']); } catch(_) {}
+                        map.setPaintProperty(id, 'text-color', t.labels.capital.color);
+                        map.setPaintProperty(id, 'text-halo-color', t.labels.capital.halo);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 4, t.labels.capital.size, 12, t.labels.capital.size * 1.5]);
+                        try { map.setLayoutProperty(id, 'text-font', [t.fonts.bold]); } catch(_) {}
 
-                    // Large & medium cities
                     } else if (lo.includes('city') || lo.includes('place_label') || lo.includes('place-label')) {
-                        map.setPaintProperty(id, 'text-color', c.cityLarge);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2.5);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 4, 11, 8, 15, 12, 18]);
-                        try { map.setLayoutProperty(id, 'text-font', ['Noto Sans Bold']); } catch(_) {}
+                        map.setPaintProperty(id, 'text-color', t.labels.city.color);
+                        map.setPaintProperty(id, 'text-halo-color', t.labels.city.halo);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 4, t.labels.city.size, 12, t.labels.city.size * 1.5]);
+                        try { map.setLayoutProperty(id, 'text-font', [t.fonts.bold]); } catch(_) {}
 
-                    // Towns
                     } else if (lo.includes('town')) {
-                        map.setPaintProperty(id, 'text-color', c.town);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 8, 10, 12, 13, 16, 15]);
+                        map.setPaintProperty(id, 'text-color', t.labels.town.color);
+                        map.setPaintProperty(id, 'text-halo-color', t.labels.town.halo);
+                        map.setLayoutProperty(id, 'text-size', ['interpolate', ['linear'], ['zoom'], 8, t.labels.town.size, 16, t.labels.town.size * 1.4]);
 
-                    // Villages, hamlets, suburbs, neighbourhoods
-                    } else if (lo.includes('village') || lo.includes('hamlet') || lo.includes('suburb') || lo.includes('neighborhood') || lo.includes('neighbourhood') || lo.includes('quarter')) {
-                        map.setPaintProperty(id, 'text-color', c.village);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 1.5);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 10, 9, 14, 11]);
-
-                    // Water bodies
-                    } else if (lo.includes('water') || lo.includes('ocean') || lo.includes('sea') || lo.includes('lake') || lo.includes('river')) {
-                        map.setPaintProperty(id, 'text-color', c.waterText);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2);
-                        try { map.setLayoutProperty(id, 'text-font', ['Noto Sans Regular']); } catch(_) {}
-
-                    // Generic place / label catch-all
-                    } else if (lo.includes('place') || lo.includes('label')) {
-                        map.setPaintProperty(id, 'text-color', c.cityMed);
-                        map.setPaintProperty(id, 'text-halo-color', c.halo);
-                        map.setPaintProperty(id, 'text-halo-width', 2);
-                        map.setLayoutProperty(id, 'text-size',
-                            ['interpolate', ['linear'], ['zoom'], 5, 11, 10, 14, 14, 16]);
+                    } else if (lo.includes('water') || lo.includes('ocean') || lo.includes('lake') || lo.includes('river')) {
+                        map.setPaintProperty(id, 'text-color', t.labels.water.color);
+                        map.setLayoutProperty(id, 'text-size', t.labels.water.size);
                     }
                 }
 
                 // ── Fill layers ─────────────────────────────────────────────
                 if (type === 'fill') {
                     if (lo.includes('water') || lo.includes('ocean') || lo.includes('sea') || lo.includes('lake')) {
-                        map.setPaintProperty(id, 'fill-color', c.water);
-
+                        map.setPaintProperty(id, 'fill-color', '#060810');
                     } else if (lo.includes('land') || lo.includes('background') || lo.includes('earth')) {
-                        map.setPaintProperty(id, 'fill-color', c.bg);
-                        try { map.setPaintProperty(id, 'fill-pattern', ''); } catch(_) {}
-
-                    } else if (lo.includes('park') || lo.includes('wood') || lo.includes('forest') || lo.includes('grass') || lo.includes('green') || lo.includes('meadow') || lo.includes('scrub')) {
-                        map.setPaintProperty(id, 'fill-color', c.park);
-                        map.setPaintProperty(id, 'fill-opacity', 0.9);
-
+                        map.setPaintProperty(id, 'fill-color', t.background);
+                    } else if (lo.includes('park') || lo.includes('wood') || lo.includes('forest')) {
+                        map.setPaintProperty(id, 'fill-color', '#0d1219');
                     } else if (lo.includes('building')) {
-                        map.setPaintProperty(id, 'fill-color', c.building);
-                        map.setPaintProperty(id, 'fill-opacity', 0.65);
+                        map.setPaintProperty(id, 'fill-color', '#0f1520');
                     }
                 }
 
-            } catch (_) {
-                // Silently skip layers whose properties don't match their type
-            }
+                // ── Circle layers (City Points) ──────────────────────────────
+                if (type === 'circle' && (lo.includes('city') || lo.includes('place') || lo.includes('town'))) {
+                    if (!t.visibility.cityPoints) {
+                        map.setLayoutProperty(id, 'visibility', 'none');
+                    }
+                }
+
+            } catch (_) {}
         });
     }
 };

@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Severe Weather Outlook Dashboard</title>
-    <meta name="description" content="Real-time US Severe Weather Outlook visualization using official SPC data and Tailwind v4.">
-    
+    <meta name="description"
+        content="Real-time US Severe Weather Outlook visualization using official SPC data and Tailwind v4.">
+
     <!-- Tailwind CSS v4 -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    
+
     <!-- MapLibre GL JS -->
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,11 +139,11 @@
             border-radius: 9999px;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: #3b82f6;
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(14px);
         }
 
@@ -199,14 +201,13 @@
 
         /* Legend Gradient Styles */
         .legend-gradient {
-            background: linear-gradient(to right, 
-                var(--color-spc-tstm), 
-                var(--color-spc-mrgl), 
-                var(--color-spc-slgt), 
-                var(--color-spc-enh), 
-                var(--color-spc-mdt), 
-                var(--color-spc-high)
-            );
+            background: linear-gradient(to right,
+                    var(--color-spc-tstm),
+                    var(--color-spc-mrgl),
+                    var(--color-spc-slgt),
+                    var(--color-spc-enh),
+                    var(--color-spc-mdt),
+                    var(--color-spc-high));
         }
 
         /* MapLibre Popup Styles */
@@ -243,9 +244,20 @@
         }
 
         @keyframes tor-pulse {
-            0% { stroke-width: 3; opacity: 1; }
-            50% { stroke-width: 6; opacity: 0.7; }
-            100% { stroke-width: 3; opacity: 1; }
+            0% {
+                stroke-width: 3;
+                opacity: 1;
+            }
+
+            50% {
+                stroke-width: 6;
+                opacity: 0.7;
+            }
+
+            100% {
+                stroke-width: 3;
+                opacity: 1;
+            }
         }
 
         /* Radar Site Label Styling */
@@ -275,7 +287,8 @@
         }
 
         .radar-site-label.active-radar.synced span {
-            background-color: #10b981; /* Green flash on sync */
+            background-color: #10b981;
+            /* Green flash on sync */
             border-color: #34d399;
             transform: scale(1.1);
         }
@@ -287,13 +300,33 @@
         }
 
         /* SPC Color Utility Classes */
-        .bg-spc-tstm { background-color: var(--color-spc-tstm) !important; }
-        .bg-spc-mrgl { background-color: var(--color-spc-mrgl) !important; }
-        .bg-spc-slgt { background-color: var(--color-spc-slgt) !important; }
-        .bg-spc-enh  { background-color: var(--color-spc-enh) !important; }
-        .bg-spc-mdt  { background-color: var(--color-spc-mdt) !important; }
-        .bg-spc-mdt  { background-color: var(--color-spc-mdt) !important; }
-        .bg-spc-high { background-color: var(--color-spc-high) !important; }
+        .bg-spc-tstm {
+            background-color: var(--color-spc-tstm) !important;
+        }
+
+        .bg-spc-mrgl {
+            background-color: var(--color-spc-mrgl) !important;
+        }
+
+        .bg-spc-slgt {
+            background-color: var(--color-spc-slgt) !important;
+        }
+
+        .bg-spc-enh {
+            background-color: var(--color-spc-enh) !important;
+        }
+
+        .bg-spc-mdt {
+            background-color: var(--color-spc-mdt) !important;
+        }
+
+        .bg-spc-mdt {
+            background-color: var(--color-spc-mdt) !important;
+        }
+
+        .bg-spc-high {
+            background-color: var(--color-spc-high) !important;
+        }
 
         /* Hide Zoom Controls on Mobile */
         @media (max-width: 640px) {
@@ -303,132 +336,172 @@
         }
     </style>
 </head>
+
 <body class="bg-[#0b0e14]">
     <!-- Global SVG Patterns for Outlook Hatching -->
-    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1"
+        xmlns="http://www.w3.org/2000/svg">
         <defs>
-            <pattern id="pattern-cig1" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(45)">
-                <line x1="0" y1="0" x2="0" y2="12" style="stroke:rgba(0,0,0,0.8); stroke-width:2; stroke-dasharray: 4,4" />
+            <pattern id="pattern-cig1" patternUnits="userSpaceOnUse" width="12" height="12"
+                patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="12"
+                    style="stroke:rgba(0,0,0,0.8); stroke-width:2; stroke-dasharray: 4,4" />
             </pattern>
             <pattern id="pattern-cig2" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                 <line x1="0" y1="0" x2="0" y2="8" style="stroke:rgba(0,0,0,0.8); stroke-width:3" />
             </pattern>
-            <pattern id="pattern-cig3" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+            <pattern id="pattern-cig3" patternUnits="userSpaceOnUse" width="10" height="10"
+                patternTransform="rotate(45)">
                 <line x1="0" y1="0" x2="0" y2="10" style="stroke:rgba(0,0,0,0.8); stroke-width:3" />
                 <line x1="0" y1="0" x2="10" y2="0" style="stroke:rgba(0,0,0,0.8); stroke-width:3" />
             </pattern>
         </defs>
     </svg>
 
-    <header class="fixed top-0 left-0 right-0 h-16 sm:h-20 bg-[#0b0e14]/90 backdrop-blur-md border-b border-white/5 z-[5000]">
+    <header
+        class="fixed top-0 left-0 right-0 h-16 sm:h-20 bg-[#0b0e14]/90 backdrop-blur-md border-b border-white/5 z-[5000]">
         <div class="max-w-7xl mx-auto h-full px-4 sm:px-8 flex justify-between items-center">
-            <h1 class="text-lg sm:text-2xl font-semibold tracking-tight">Severe Weather <span class="text-blue-500">Outlook</span></h1>
-            
+            <h1 class="text-lg sm:text-2xl font-semibold tracking-tight">Severe Weather <span
+                    class="text-blue-500">Outlook</span></h1>
+
             <!-- Custom Layer Menu -->
             <div class="flex items-center gap-2">
-                <button id="get-location" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none" title="Find My Location">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                <button id="get-location"
+                    class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none"
+                    title="Find My Location">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                    </svg>
                 </button>
-                <button id="toggle-radar-animation-header" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none" title="Animate Radar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 12 8-12 8V4z"/></svg>
+                <button id="toggle-radar-animation-header"
+                    class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none"
+                    title="Animate Radar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path d="m7 4 12 8-12 8V4z" />
+                    </svg>
                 </button>
-            <div class="relative">
-                <button id="active-day-label" class="bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-blue-500/30 whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer outline-none">
-                    <span>Map Layers</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-                <div id="layer-menu" class="glass-panel absolute right-0 top-full mt-3 w-64 rounded-2xl p-4 transition-all duration-200 opacity-0 scale-95 translate-y-[-10px] invisible shadow-3xl overflow-hidden z-[5001]">
-                    <div class="flex flex-col gap-4">
-                        <!-- Severe Weather Section -->
-                        <div class="flex flex-col gap-3">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Warnings</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="toggle-alerts" checked>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Watches</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="toggle-watches" checked>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Radar Section -->
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Radar</span>
-                                <div class="flex items-center gap-2">
-                                    <button id="toggle-radar-animation" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none" title="Animate Radar">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 12 8-12 8V4z"/></svg>
-                                    </button>
+                <div class="relative">
+                    <button id="active-day-label"
+                        class="bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-blue-500/30 whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer outline-none">
+                        <span>Map Layers</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div id="layer-menu"
+                        class="glass-panel absolute right-0 top-full mt-3 w-64 rounded-2xl p-4 transition-all duration-200 opacity-0 scale-95 translate-y-[-10px] invisible shadow-3xl overflow-hidden z-[5001]">
+                        <div class="flex flex-col gap-4">
+                            <!-- Severe Weather Section -->
+                            <div class="flex flex-col gap-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live
+                                        Warnings</span>
                                     <label class="toggle-switch">
-                                        <input type="checkbox" id="toggle-radar-layer" checked>
+                                        <input type="checkbox" id="toggle-alerts" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live
+                                        Watches</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="toggle-watches" checked>
                                         <span class="slider"></span>
                                     </label>
                                 </div>
                             </div>
-                            <div id="radar-product-selector" class="flex p-1 bg-white/5 rounded-xl gap-1">
-                                <button data-product="sr_bref" class="radar-product-btn active flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tight outline-none">Reflectivity</button>
-                                <button data-product="sr_bvel" class="radar-product-btn flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tight outline-none">Velocity</button>
+
+                            <!-- Radar Section -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live
+                                        Radar</span>
+                                    <div class="flex items-center gap-2">
+                                        <button id="toggle-radar-animation"
+                                            class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 transition-colors cursor-pointer outline-none"
+                                            title="Animate Radar">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="m7 4 12 8-12 8V4z" />
+                                            </svg>
+                                        </button>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="toggle-radar-layer" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div id="radar-product-selector" class="flex p-1 bg-white/5 rounded-xl gap-1">
+                                    <button data-product="sr_bref"
+                                        class="radar-product-btn active flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tight outline-none">Reflectivity</button>
+                                    <button data-product="sr_bvel"
+                                        class="radar-product-btn flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tight outline-none">Velocity</button>
+                                </div>
                             </div>
-                        </div>
 
-                        <hr class="border-white/10">
+                            <hr class="border-white/10">
 
-                        <!-- Outlooks Section -->
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Outlooks</span>
+                            <!-- Outlooks Section -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span
+                                        class="text-xs font-bold text-slate-400 uppercase tracking-wider">Outlooks</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="toggle-outlooks" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div id="layer-options"
+                                    class="flex flex-col gap-1 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+
+                            <hr class="border-white/10">
+
+                            <div class="flex items-center justify-between px-3 py-2">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Radar Site Labels</span>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="toggle-outlooks" checked>
+                                    <input type="checkbox" id="toggle-radar-sites" checked>
                                     <span class="slider"></span>
                                 </label>
                             </div>
-                            <div id="layer-options" class="flex flex-col gap-1 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
-                                <!-- Populated via JS -->
-                            </div>
-                        </div>
-
-                        <hr class="border-white/10">
-
-                        <div class="p-1">
-                            <button id="toggle-radar-sites" class="w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm transition-colors hover:bg-white/5 cursor-pointer flex items-center justify-between group outline-none">
-                                <span class="text-slate-400 group-hover:text-white font-medium">Radar Site Labels</span>
-                                <div id="radar-sites-status" class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-colors"></div>
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
         </div>
     </header>
 
     <main class="flex-1 relative">
         <div id="map" class="w-full h-full"></div>
-        
-        <button id="legend-toggle" class="sm:hidden absolute bottom-6 left-6 w-12 h-12 glass-panel rounded-full flex items-center justify-center z-[1001] text-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"/>
-                <path d="M9 3v15"/>
-                <path d="M15 6v15"/>
-                <circle cx="18" cy="11" r="1.5" fill="currentColor"/>
-                <circle cx="18" cy="15" r="1.5" fill="currentColor"/>
-                <circle cx="18" cy="19" r="1.5" fill="currentColor"/>
+
+        <button id="legend-toggle"
+            class="sm:hidden absolute bottom-6 left-6 w-12 h-12 glass-panel rounded-full flex items-center justify-center z-[1001] text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" />
+                <path d="M9 3v15" />
+                <path d="M15 6v15" />
+                <circle cx="18" cy="11" r="1.5" fill="currentColor" />
+                <circle cx="18" cy="15" r="1.5" fill="currentColor" />
+                <circle cx="18" cy="19" r="1.5" fill="currentColor" />
             </svg>
         </button>
 
         <!-- Legend Overlay -->
-        <div id="legend-container" class="glass-panel absolute bottom-20 left-6 right-6 sm:right-auto sm:bottom-8 sm:left-6 p-5 rounded-2xl z-[1000] sm:w-64 transition-all duration-300 transform translate-y-4 opacity-0 scale-95 sm:translate-y-0 sm:opacity-100 sm:scale-100">
+        <div id="legend-container"
+            class="glass-panel absolute bottom-20 left-6 right-6 sm:right-auto sm:bottom-8 sm:left-6 p-5 rounded-2xl z-[1000] sm:w-64 transition-all duration-300 transform translate-y-4 opacity-0 scale-95 sm:translate-y-0 sm:opacity-100 sm:scale-100">
             <div class="flex justify-between items-center mb-4 sm:mb-2">
-                <h3 class="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-widest">Map Legend</h3>
+                <h3 class="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-widest">Map Legend
+                </h3>
                 <button id="legend-close" class="sm:hidden text-slate-400">&times;</button>
             </div>
-            <div id="legend-title" class="text-[10px] font-bold text-blue-400 uppercase tracking-tight mb-3 hidden"></div>
+            <div id="legend-title" class="text-[10px] font-bold text-blue-400 uppercase tracking-tight mb-3 hidden">
+            </div>
             <div id="legend-items" class="grid grid-cols-2 sm:grid-cols-1 gap-3 sm:gap-2">
                 <!-- Populated via JS -->
             </div>
@@ -438,20 +511,27 @@
         <div id="side-panel" class="glass-panel absolute flex flex-col overflow-hidden">
             <div class="flex justify-between items-center p-5 border-b border-white/10 bg-white/3">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Technical Discussion</h3>
-                <button id="close-panel" class="text-slate-400 hover:text-white text-2xl leading-none transition-colors">&times;</button>
+                <button id="close-panel"
+                    class="text-slate-400 hover:text-white text-2xl leading-none transition-colors">&times;</button>
             </div>
-            <div id="discussion-body" class="flex-1 overflow-y-auto p-6 text-sm leading-relaxed scrollbar-thin scrollbar-thumb-white/10">
-                <p class="text-slate-400 italic text-center mt-8">Select a region to view the technical discussion...</p>
+            <div id="discussion-body"
+                class="flex-1 overflow-y-auto p-6 text-sm leading-relaxed scrollbar-thin scrollbar-thumb-white/10">
+                <p class="text-slate-400 italic text-center mt-8">Select a region to view the technical discussion...
+                </p>
             </div>
         </div>
 
         <!-- Radar Timestamp Panel -->
-        <div id="radar-timestamp-container" class="glass-panel absolute bottom-6 right-6 sm:bottom-8 sm:right-8 p-2.5 px-4 rounded-xl z-[1000] transition-all duration-300 flex flex-col gap-0.5 shadow-2xl scale-90 sm:scale-100 origin-bottom-right">
+        <div id="radar-timestamp-container"
+            class="glass-panel absolute bottom-6 right-6 sm:bottom-8 sm:right-8 p-2.5 px-4 rounded-xl z-[1000] transition-all duration-300 flex flex-col gap-0.5 shadow-2xl scale-90 sm:scale-100 origin-bottom-right">
             <div class="flex items-center gap-2">
                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span id="radar-station-name" class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Radar Selected</span>
+                <span id="radar-station-name"
+                    class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Radar
+                    Selected</span>
             </div>
-            <div id="radar-timestamp" class="text-[10px] sm:text-[11px] font-semibold text-white tabular-nums">--:-- --</div>
+            <div id="radar-timestamp" class="text-[10px] sm:text-[11px] font-semibold text-white tabular-nums">--:-- --
+            </div>
         </div>
     </main>
 
@@ -459,7 +539,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script type="module" src="app.js"></script>
 </body>
+
 </html>

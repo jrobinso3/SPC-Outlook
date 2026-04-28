@@ -11,6 +11,7 @@ export const state = {
     showAlerts: true,    // Live Warnings
     showWatches: true,   // Live Watches
     showOutlooks: true,
+    showRadarSites: true,
     
     currentOutlookKey: 'day1cat',
     currentRadarProduct: 'sr_bref',
@@ -38,7 +39,8 @@ export function saveAppState() {
         showOutlooks: state.showOutlooks,
         currentOutlookKey: state.currentOutlookKey,
         currentRadarProduct: state.currentRadarProduct,
-        activeRadarId: state.activeRadarId
+        activeRadarId: state.activeRadarId,
+        showRadarSites: state.showRadarSites
     };
     localStorage.setItem('spc_dashboard_state', JSON.stringify(persistence));
 }
@@ -58,6 +60,7 @@ export function loadAppState() {
         state.currentOutlookKey = parsed.currentOutlookKey || 'day1cat';
         state.currentRadarProduct = parsed.currentRadarProduct || 'sr_bref';
         state.activeRadarId = parsed.activeRadarId || null;
+        state.showRadarSites = parsed.showRadarSites ?? true;
         
         return parsed;
     } catch (e) {

@@ -37,6 +37,13 @@ export function initRadarMarkers() {
     const map = state.map;
     if (!map) return;
 
+    // Clear existing HTML markers
+    if (state.radarMarkers) {
+        state.radarMarkers.forEach(m => m.remove());
+    }
+    state.radarMarkers = [];
+
+    // Create/Refresh the hidden vector layer for easy map clicking
     if (map.getLayer('radar-sites')) map.removeLayer('radar-sites');
     if (map.getSource('radar-sites-src')) map.removeSource('radar-sites-src');
 
@@ -50,32 +57,56 @@ export function initRadarMarkers() {
     };
 
     map.addSource('radar-sites-src', { type: 'geojson', data: geojson });
-
     map.addLayer({
         id: 'radar-sites',
-        type: 'symbol',
+        type: 'circle',
         source: 'radar-sites-src',
-        layout: {
-            'text-field': ['get', 'id'],
-            'text-size': 10,
-            'text-allow-overlap': false
-        },
         paint: {
-            'text-color': '#94a3b8',
-            'text-halo-color': '#020617',
-            'text-halo-width': 1
+            'circle-radius': 15,
+            'circle-color': 'transparent',
+            'circle-stroke-width': 0
         }
+    });
+
+    // Create the visual HTML "Pills"
+    state.radarSites.forEach(site => {
+        const el = document.createElement('div');
+        el.className = 'radar-site-label';
+        const sid = site.id.toUpperCase();
+        
+        if (state.activeRadarId?.toUpperCase() === sid) {
+            el.classList.add('active-radar');
+        }
+        
+        const span = document.createElement('span');
+        span.textContent = sid;
+        el.appendChild(span);
+
+        const marker = new maplibregl.Marker({ element: el })
+            .setLngLat([site.lon, site.lat])
+            .addTo(map);
+
+        // Initial visibility
+        el.style.display = state.showRadarSites ? 'block' : 'none';
+
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            loadRadar(sid);
+        });
+
+        state.radarMarkers.push(marker);
     });
 }
 
 export function loadRadar(stationId, isHeartbeat = false) {
     const map = state.map;
-    if (!map || !state.showRadar) return;
+    if (!map || !state.showRadar || !stationId) return;
 
     const wasAnimating = animationState.isPlaying;
     stopAnimation(true);
 
-    const station = stationId.toLowerCase();
+    const targetId = stationId.toUpperCase();
+    const station = targetId.toLowerCase();
     const layerName = `${station}_${state.currentRadarProduct}`;
     
     // Remove existing radar layers
@@ -83,8 +114,6 @@ export function loadRadar(stationId, isHeartbeat = false) {
     if (map.getSource('radar-src')) map.removeSource('radar-src');
 
     const beforeId = getLayerAnchor('radar');
-
-    // Formulate WMS URL for MapLibre
     const wmsUrl = `https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${layerName}&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&WIDTH=256&HEIGHT=256&CRS=EPSG:3857&BBOX={bbox-epsg-3857}`;
 
     map.addSource('radar-src', {
@@ -100,16 +129,25 @@ export function loadRadar(stationId, isHeartbeat = false) {
         paint: { 'raster-opacity': 0.8 }
     }, beforeId);
 
-    state.activeRadarId = stationId;
-
+    state.activeRadarId = targetId;
     if (wasAnimating) toggleRadarAnimation();
+
+    // Sync visual markers (active state)
+    if (state.radarMarkers) {
+        state.radarMarkers.forEach(marker => {
+            const el = marker.getElement();
+            const mid = el.textContent?.toUpperCase();
+            if (mid === targetId) el.classList.add('active-radar');
+            else el.classList.remove('active-radar');
+        });
+    }
 
     // Update UI Panel
     const stationEl = document.getElementById('radar-station-name');
     const timeEl = document.getElementById('radar-timestamp');
     if (stationEl && timeEl) {
-        const site = state.radarSites.find(s => s.id === stationId);
-        stationEl.textContent = `${stationId} ${site ? `(${site.city})` : ''}`;
+        const site = state.radarSites.find(s => s.id.toUpperCase() === targetId);
+        stationEl.textContent = `${targetId} ${site ? `(${site.city})` : ''}`;
         timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 }
@@ -129,7 +167,7 @@ export function findNearestRadar(force = false) {
         }
     });
 
-    if (nearestSite && nearestSite.id !== state.activeRadarId) {
+    if (nearestSite && nearestSite.id.toUpperCase() !== state.activeRadarId?.toUpperCase()) {
         loadRadar(nearestSite.id);
     }
 }

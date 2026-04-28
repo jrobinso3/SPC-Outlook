@@ -78,5 +78,38 @@ export const CONFIG = {
             'CIG2': '3.0" - 3.9" Hail (Tea Cup to Softball)',
             'CIG3': '4.0"+ Hail (Grapefruit size+)'
         }
+    },
+
+    // ── Map Styling & Theme Engine ──────────────────────────────────────────
+    theme: {
+        background: '#0b0e14',
+        fonts: {
+            main: 'Noto Sans Regular',
+            bold: 'Noto Sans Bold',
+            ui:   'Outfit'
+        },
+        roads: {
+            motorway:  '#3d4f63',
+            trunk:     '#2e3f52',
+            primary:   '#243347',
+            secondary: '#1a2638',
+            tertiary:  '#141e2c',
+            minor:     '#0f1724',
+            casing:    '#070b12'
+        },
+        labels: {
+            capital: { color: '#f1f5f9', size: 14, halo: '#0b0e14' },
+            city:    { color: '#e2e8f0', size: 12, halo: '#0b0e14' },
+            town:    { color: '#94a3b8', size: 11, halo: '#0b0e14' },
+            village: { color: '#64748b', size: 10, halo: '#0b0e14' },
+            state:   { color: '#3d5470', size: 12, halo: '#0b0e14' },
+            country: { color: '#2d4060', size: 14, halo: '#0b0e14' },
+            water:   { color: '#1a3a5c', size: 10, halo: '#0b0e14' }
+        },
+        visibility: {
+            cityPoints: false,
+            buildings: true,
+            terrain: true
+        }
     }
 };
