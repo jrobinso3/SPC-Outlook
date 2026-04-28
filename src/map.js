@@ -4,9 +4,6 @@ import { fetchRadarSites, findNearestRadar } from './radar.js';
 import { loadLiveAlerts } from './alerts.js';
 import { initUIListeners } from './ui.js';
 import { switchOutlook } from './outlooks.js';
-import { ThemeManager } from './theme.js';
-
-import { URLShieldRenderer } from '@americana/maplibre-shield-generator';
 
 export async function initMap() {
     const savedState = loadAppState();
@@ -20,61 +17,21 @@ export async function initMap() {
     }
     const startZoom = savedState?.zoom || CONFIG.initialZoom;
 
-    // Mutate the style for Americana Shield Generator
     const styleUrl = 'https://api.maptiler.com/maps/019dd63d-eedc-7a5e-bdc6-91ef995b7812/style.json?key=snXh093GMfKPzv2loT4i';
-    let styleObj = styleUrl;
-    
-    /* 
-    // Mutating style for Americana shields and local glyphs is disabled
-    // as it conflicts with the user's custom MapTiler settings.
-    try {
-        const res = await fetch(styleUrl);
-        const json = await res.json();
-        json.layers.forEach(layer => {
-            if (layer.id.includes('shield') || (layer.id.includes('road') && layer.id.includes('label'))) {
-                layer.layout = layer.layout || {};
-                layer.layout['icon-image'] = [
-                    'concat', 'shield|', ['get', 'network'], '|', ['get', 'ref'], '|', ['coalesce', ['get', 'name'], '']
-                ];
-                delete layer.layout['text-field'];
-                layer.layout['icon-allow-overlap'] = true;
-            }
-        });
-        // Use local Oswald glyphs
-        const baseUrl = window.location.origin + (import.meta.env.BASE_URL || '/');
-        json.glyphs = `${baseUrl}fonts/{fontstack}/{range}.pbf`;
-
-        styleObj = json;
-    } catch (e) {
-        console.error("Style mutation failed:", e);
-    }
-    */
 
     state.map = new maplibregl.Map({
         container: 'map',
-        style: styleObj,
+        style: styleUrl,
         center: startCenter,
         zoom: startZoom,
         attributionControl: false
     });
 
-    // Americana Shield Renderer
-    const routeParser = {
-        parse: (id) => {
-            const parts = id.split('|');
-            return { network: parts[1] || '', ref: parts[2] || '', name: parts[3] || '' };
-        },
-        format: (network, ref, name) => `shield|${network}|${ref}|${name}`
-    };
 
-    new URLShieldRenderer("https://osm-americana.github.io/openstreetmap-americana/shields.json", routeParser)
-        .filterImageID(id => id.startsWith("shield|"))
-        .renderOnMaplibreGL(state.map);
 
     state.map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     state.map.on('load', () => {
-        // ThemeManager.applyPremiumStyles(state.map);
         fetchRadarSites();
         loadLiveAlerts();
         initUIListeners();
