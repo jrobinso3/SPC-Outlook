@@ -1,3 +1,5 @@
+import { log } from './logger.js';
+
 /**
  * Global application state and persistence
  */
@@ -29,20 +31,24 @@ export const state = {
 
 export function saveAppState() {
     if (!state.map) return;
-    const center = state.map.getCenter();
-    const persistence = {
-        center: [center.lat, center.lng], // Save as [lat, lng] for consistency
-        zoom: state.map.getZoom(),
-        showRadar: state.showRadar,
-        showAlerts: state.showAlerts,
-        showWatches: state.showWatches,
-        showOutlooks: state.showOutlooks,
-        currentOutlookKey: state.currentOutlookKey,
-        currentRadarProduct: state.currentRadarProduct,
-        activeRadarId: state.activeRadarId,
-        showRadarSites: state.showRadarSites
-    };
-    localStorage.setItem('spc_dashboard_state', JSON.stringify(persistence));
+    try {
+        const center = state.map.getCenter();
+        const persistence = {
+            center: { lng: center.lng, lat: center.lat },
+            zoom: state.map.getZoom(),
+            showRadar: state.showRadar,
+            showAlerts: state.showAlerts,
+            showWatches: state.showWatches,
+            showOutlooks: state.showOutlooks,
+            currentOutlookKey: state.currentOutlookKey,
+            currentRadarProduct: state.currentRadarProduct,
+            activeRadarId: state.activeRadarId,
+            showRadarSites: state.showRadarSites
+        };
+        localStorage.setItem('spc_dashboard_state', JSON.stringify(persistence));
+    } catch (e) {
+        log.warn('State', 'Failed to save state to localStorage:', e);
+    }
 }
 
 export function loadAppState() {
@@ -64,7 +70,7 @@ export function loadAppState() {
         
         return parsed;
     } catch (e) {
-        console.error('Error loading saved state:', e);
+        log.error('State', 'Error loading saved state:', e);
         return null;
     }
 }

@@ -1,7 +1,12 @@
 export const CONFIG = {
-    mapCenter: [39.8283, -98.5795], // Geographic center of CONUS
+    mapCenter: [39.8283, -98.5795], // Geographic center of CONUS [lat, lng]
     initialZoom: 4,
+    mapStyleUrl: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
     apiBase: 'https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer',
+    discussionBase: 'https://www.spc.noaa.gov/products/outlook',
+    alertsApi: 'https://api.weather.gov/alerts/active',
+    watchPolygonsApi: 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/6',
+
     layers: [
         { id: 1, name: "Today's Categorical Outlook", key: 'day1cat', discussion: 'day1' },
         { id: 3, name: "Today's Tornado Probabilities", key: 'day1torn', discussion: 'day1', sigLayerId: 2 },
@@ -19,18 +24,18 @@ export const CONFIG = {
         { id: 21, name: 'Day 4 Total Severe Probabilities', key: 'day4prob', discussion: 'day48' },
         { id: 22, name: 'Day 5 Total Severe Probabilities', key: 'day5prob', discussion: 'day48' }
     ],
-    discussionBase: 'https://www.spc.noaa.gov/products/outlook',
+
     colors: {
         categorical: {
             'TSTM': '#c1e9aa',
-            'MRGL': '#008b00',
-            'SLGT': '#ffff00',
-            'ENH': '#ffa500',
-            'MDT': '#ff0000',
-            'HIGH': '#ff00ff'
+            'MRGL': '#79c06e',
+            'SLGT': '#fef054',
+            'ENH': '#ed8f43',
+            'MDT': '#e7292a',
+            'HIGH': '#f05df0'
         },
         tornado: {
-            '0.02': '#008b00', '2%': '#008b00',
+            '0.02': '#79c06e', '2%': '#79c06e',
             '0.05': '#8b4726', '5%': '#8b4726',
             '0.10': '#ffa500', '10%': '#ffa500',
             '0.15': '#ff0000', '15%': '#ff0000',
@@ -58,10 +63,9 @@ export const CONFIG = {
             '0.15': '#ffff99', '15%': '#ffff99',
             '0.30': '#e6c28c', '30%': '#e6c28c'
         },
-        'DEFAULT': '#3b82f6'
+        'DEFAULT': '#38bdf8'
     },
-    alertsApi: 'https://api.weather.gov/alerts/active',
-    watchPolygonsApi: 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/6',
+
     sigDescriptions: {
         TORNADO: {
             'CIG1': 'EF2 - EF3 Tornadoes Possible',
@@ -77,39 +81,6 @@ export const CONFIG = {
             'CIG1': '2.0" - 2.9" Hail (Egg to Baseball)',
             'CIG2': '3.0" - 3.9" Hail (Tea Cup to Softball)',
             'CIG3': '4.0"+ Hail (Grapefruit size+)'
-        }
-    },
-
-    // ── Map Styling & Theme Engine ──────────────────────────────────────────
-    theme: {
-        background: '#0b0e14',
-        fonts: {
-            main: 'Oswald Regular',
-            bold: 'Oswald Bold',
-            ui:   'Oswald'
-        },
-        roads: {
-            motorway:  '#3d4f63',
-            trunk:     '#2e3f52',
-            primary:   '#243347',
-            secondary: '#1a2638',
-            tertiary:  '#141e2c',
-            minor:     '#0f1724',
-            casing:    '#070b12'
-        },
-        labels: {
-            capital: { color: '#ffffff', size: 18, halo: '#0b0e14' },
-            city:    { color: '#ffffff', size: 16, halo: '#0b0e14' },
-            town:    { color: '#f1f5f9', size: 16, halo: '#0b0e14' },
-            village: { color: '#e2e8f0', size: 15, halo: '#0b0e14' },
-            state:   { color: '#cbd5e1', size: 16, halo: '#0b0e14' },
-            country: { color: '#cbd5e1', size: 18, halo: '#0b0e14' },
-            water:   { color: '#94a3b8', size: 15, halo: '#0b0e14' }
-        },
-        visibility: {
-            cityPoints: false,
-            buildings: true,
-            terrain: true
         }
     }
 };

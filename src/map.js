@@ -1,116 +1,225 @@
+import * as npmMaplibre from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { state, saveAppState, loadAppState } from './state.js';
 import { CONFIG } from './config.js';
-import { fetchRadarSites, findNearestRadar } from './radar.js';
-import { loadLiveAlerts } from './alerts.js';
+import { fetchRadarSites, findNearestRadar, loadRadar } from './radar.js';
+import { loadLiveAlerts, handleAlertClick } from './alerts.js';
 import { initUIListeners } from './ui.js';
-import { switchOutlook } from './outlooks.js';
+import { switchOutlook, handleOutlookClick } from './outlooks.js';
+import { log } from './logger.js';
+
+const maplibregl = (typeof window !== 'undefined' && window.maplibregl) ? window.maplibregl : npmMaplibre;
+
+function parseValidCenter(c) {
+    const defaultCenter = [CONFIG.mapCenter[1], CONFIG.mapCenter[0]]; // [-98.5795, 39.8283]
+    if (!c) return defaultCenter;
+
+    let lng = NaN;
+    let lat = NaN;
+
+    if (Array.isArray(c)) {
+        if (c.length >= 2) {
+            const first = Number(c[0]);
+            const second = Number(c[1]);
+            if (Math.abs(first) <= 180 && Math.abs(second) <= 90 && (first < -50 && first > -130)) {
+                lng = first;
+                lat = second;
+            } else if (Math.abs(first) <= 90 && Math.abs(second) <= 180) {
+                lat = first;
+                lng = second;
+            }
+        }
+    } else if (typeof c === 'object') {
+        lng = Number(c.lng ?? c.lon ?? c.longitude);
+        lat = Number(c.lat ?? c.latitude);
+    }
+
+    if (isNaN(lng) || isNaN(lat) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        log.warn('Map', 'Saved center coordinates were out of bounds. Resetting to default CONUS center.', c);
+        return defaultCenter;
+    }
+
+    return [lng, lat];
+}
+
+function parseValidZoom(z) {
+    const num = Number(z);
+    if (isNaN(num) || num < 1 || num > 22) {
+        return CONFIG.initialZoom;
+    }
+    return num;
+}
 
 export async function initMap() {
+    log.map('initMap() starting...');
     const savedState = loadAppState();
 
-    let startCenter = [CONFIG.mapCenter[1], CONFIG.mapCenter[0]];
-    if (savedState?.center) {
-        const c = savedState.center;
-        const lng = Array.isArray(c) ? c[1] : (c.lng || c.lon);
-        const lat = Array.isArray(c) ? c[0] : c.lat;
-        if (!isNaN(lng) && !isNaN(lat)) startCenter = [lng, lat];
+    const startCenter = parseValidCenter(savedState?.center);
+    const startZoom = parseValidZoom(savedState?.zoom);
+
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+        log.error('Map', 'Fatal: #map container element not found in DOM!');
+        return;
     }
-    const startZoom = savedState?.zoom || CONFIG.initialZoom;
 
-    const styleUrl = 'https://api.maptiler.com/maps/019dd63d-eedc-7a5e-bdc6-91ef995b7812/style.json?key=snXh093GMfKPzv2loT4i';
+    log.map('Initializing MapLibre instance with dataviz-dark style...', { center: startCenter, zoom: startZoom });
 
-    state.map = new maplibregl.Map({
-        container: 'map',
-        style: styleUrl,
-        center: startCenter,
-        zoom: startZoom,
-        attributionControl: false
+    try {
+        state.map = new maplibregl.Map({
+            container: 'map',
+            style: CONFIG.mapStyleUrl,
+            center: startCenter,
+            zoom: startZoom,
+            attributionControl: false,
+            antialias: true
+        });
+    } catch (err) {
+        log.error('Map', 'Error creating map, falling back to defaults:', err);
+        state.map = new maplibregl.Map({
+            container: 'map',
+            style: CONFIG.mapStyleUrl,
+            center: [CONFIG.mapCenter[1], CONFIG.mapCenter[0]],
+            zoom: CONFIG.initialZoom,
+            attributionControl: false,
+            antialias: true
+        });
+    }
+
+    // Initialize UI listeners immediately
+    try {
+        log.ui('Initializing UI listeners...');
+        initUIListeners();
+    } catch (e) {
+        log.error('UI', 'Error initializing UI listeners:', e);
+    }
+
+    state.map.on('error', (e) => {
+        log.warn('Map', 'MapLibre internal event error:', e);
     });
 
+    state.map.once('load', async () => {
+        log.map('Map load event fired! Initializing layers...');
+        state.map.resize();
 
-
-    // state.map.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-    state.map.on('load', () => {
-        fetchRadarSites();
-        loadLiveAlerts();
-        initUIListeners();
-
-        if (state.showOutlooks) {
-            const defaultLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey) || CONFIG.layers[0];
-            if (defaultLayer) switchOutlook(defaultLayer);
+        // 1. Radar stations
+        try {
+            log.radar('Fetching radar sites...');
+            await fetchRadarSites();
+        } catch (e) {
+            log.error('Radar', 'Error fetching radar sites:', e);
         }
 
-        // Global Click Logic
+        // 2. Active Warnings & Watches
+        try {
+            log.alerts('Loading live alerts and watches...');
+            await loadLiveAlerts();
+        } catch (e) {
+            log.error('Alerts', 'Error loading live alerts:', e);
+        }
+
+        // 3. Active SPC Outlook
+        if (state.showOutlooks) {
+            try {
+                const defaultLayer = CONFIG.layers.find(l => l.key === state.currentOutlookKey) || CONFIG.layers[0];
+                if (defaultLayer) {
+                    log.outlooks('Loading initial outlook layer:', defaultLayer.name);
+                    await switchOutlook(defaultLayer);
+                }
+            } catch (e) {
+                log.error('Outlooks', 'Error loading initial outlook:', e);
+            }
+        }
+
+        // Global Map Click Handler
         state.map.on('click', (e) => {
-            const layers = ['alerts-fill', 'radar-sites', 'watches-fill', 'outlook-fill'];
-            const features = state.map.queryRenderedFeatures(e.point, { layers: layers.filter(l => state.map.getLayer(l)) });
+            const queryLayers = ['alerts-fill', 'radar-sites', 'watches-fill', 'outlook-fill'].filter(id => state.map.getLayer(id));
+            const features = state.map.queryRenderedFeatures(e.point, { layers: queryLayers });
 
             if (!features.length) return;
             const top = features[0];
             const lid = top.layer.id;
+            log.ui('Map clicked feature on layer:', lid, top.properties);
 
             if (lid === 'alerts-fill' || lid === 'watches-fill') {
-                import('./alerts.js').then(m => m.handleAlertClick(e, top));
+                handleAlertClick(e, top);
             } else if (lid === 'radar-sites') {
-                import('./radar.js').then(m => m.loadRadar(top.properties.id));
+                loadRadar(top.properties.id);
             } else if (lid === 'outlook-fill') {
-                import('./outlooks.js').then(m => m.handleOutlookClick(e, top));
+                handleOutlookClick(e, top);
             }
         });
 
+        // Hover cursor pointer
         state.map.on('mousemove', (e) => {
-            const layers = ['alerts-fill', 'radar-sites', 'watches-fill', 'outlook-fill'];
-            const features = state.map.queryRenderedFeatures(e.point, { layers: layers.filter(l => state.map.getLayer(l)) });
+            const queryLayers = ['alerts-fill', 'radar-sites', 'watches-fill', 'outlook-fill'].filter(id => state.map.getLayer(id));
+            const features = state.map.queryRenderedFeatures(e.point, { layers: queryLayers });
             state.map.getCanvas().style.cursor = features.length ? 'pointer' : '';
         });
 
+        // Save viewport state on pan/zoom
         let moveTimeout;
         state.map.on('moveend', () => {
             clearTimeout(moveTimeout);
             moveTimeout = setTimeout(() => {
                 findNearestRadar();
                 saveAppState();
-            }, 250);
+            }, 300);
         });
     });
 
+    // Radar heartbeat refresh every 30s
     setInterval(() => {
         if (state.showRadar && state.activeRadarId) {
-            import('./radar.js').then(m => m.loadRadar(state.activeRadarId, true));
+            log.radar('Heartbeat: refreshing active radar layer:', state.activeRadarId);
+            loadRadar(state.activeRadarId, true);
         }
     }, 30000);
 }
 
 export function locateUser() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-        const { latitude, longitude } = pos.coords;
-        state.map.flyTo({ center: [longitude, latitude], zoom: 10, essential: true });
-        if (state.userMarker) state.userMarker.remove();
-        state.userMarker = new maplibregl.Marker({ color: '#0ea5e9' }).setLngLat([longitude, latitude]).addTo(state.map);
-        import('./radar.js').then(m => m.findNearestRadar(true));
-    });
+    log.ui('Locate user requested');
+    if (!navigator.geolocation) {
+        log.warn('UI', 'Geolocation is not supported by this browser');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            log.ui('User located:', { latitude, longitude });
+            state.map.flyTo({ center: [longitude, latitude], zoom: 10, essential: true });
+            if (state.userMarker) state.userMarker.remove();
+            state.userMarker = new maplibregl.Marker({ color: '#0ea5e9' }).setLngLat([longitude, latitude]).addTo(state.map);
+            findNearestRadar(true);
+        },
+        (err) => {
+            log.warn('UI', 'Geolocation failed or permission denied:', err.message);
+        }
+    );
 }
 
+/**
+ * Returns the layer ID of the first symbol/label layer
+ * so outlooks and radar layers render underneath text labels.
+ */
 export function getLayerAnchor(type) {
     const map = state.map;
-    if (!map) return null;
-    const layers = map.getStyle().layers;
+    if (!map) return undefined;
+    const style = map.getStyle();
+    if (!style || !style.layers) return undefined;
+    const layers = style.layers;
 
-    // Find first road or label layer to stay beneath
-    const roadOrLabel = layers.find(l => 
-        l.id.includes('road') || 
-        l.id.includes('highway') || 
-        l.id.includes('transportation') || 
+    // Find first symbol (label) layer or road layer to stay beneath
+    const labelLayer = layers.find(l => 
         l.type === 'symbol' || 
-        l.id.includes('label')
+        l.id.includes('label') ||
+        l.id.includes('border')
     )?.id;
 
-    if (type === 'warnings') return roadOrLabel;
-    if (type === 'radar') return layers.find(l => l.id === 'alerts-fill')?.id || roadOrLabel;
-    if (type === 'watches') return layers.find(l => l.id === 'radar-raster')?.id || layers.find(l => l.id === 'alerts-fill')?.id || roadOrLabel;
-    if (type === 'outlooks') return layers.find(l => l.id === 'watches-fill')?.id || layers.find(l => l.id === 'radar-raster')?.id || roadOrLabel;
+    if (type === 'warnings') return labelLayer;
+    if (type === 'radar') return layers.find(l => l.id === 'alerts-fill')?.id || labelLayer;
+    if (type === 'watches') return layers.find(l => l.id === 'radar-raster')?.id || layers.find(l => l.id === 'alerts-fill')?.id || labelLayer;
+    if (type === 'outlooks') return layers.find(l => l.id === 'watches-fill')?.id || layers.find(l => l.id === 'radar-raster')?.id || labelLayer;
     
-    return roadOrLabel;
+    return labelLayer;
 }

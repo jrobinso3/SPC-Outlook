@@ -1,54 +1,62 @@
+const maplibregl = typeof window !== 'undefined' && window.maplibregl ? window.maplibregl : {};
 import { state } from './state.js';
-import { CONFIG } from './config.js';
 import { updateMapLegend } from './legend.js';
-import { DataProvider } from './api.js';
+import { AlertsService } from './services/alerts-service.js';
 import { ThemeManager } from './theme.js';
 import { getLayerAnchor } from './map.js';
+import { log } from './logger.js';
 
-export async function loadLiveAlerts() {
+let previousWarnings = [];
+let previousWatchCount = 0;
+
+export async function loadLiveAlerts(forceRefresh = false) {
     const map = state.map;
     if (!map) return;
+    log.alerts('loadLiveAlerts() starting...');
 
     try {
-        const events = ['Tornado Warning', 'Tornado Watch', 'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch', 'Severe Weather Statement'];
-        const params = new URLSearchParams({ event: events.join(','), status: 'actual' });
-        const url = `${CONFIG.alertsApi}?${params.toString()}`;
-        
-        // Remove existing layers and sources
-        ['alerts-fill', 'alerts-border', 'alerts-pds', 'watches-fill', 'watches-border'].forEach(id => {
-            if (map.getLayer(id)) map.removeLayer(id);
-        });
-        if (map.getSource('alerts-src')) map.removeSource('alerts-src');
-        if (map.getSource('watches-src')) map.removeSource('watches-src');
-
         if (!state.showAlerts && !state.showWatches) {
+            log.alerts('Alerts and watches disabled in state');
+            ['alerts-fill', 'alerts-border', 'watches-fill', 'watches-border'].forEach(id => {
+                if (map.getLayer(id)) map.removeLayer(id);
+            });
+            if (map.getSource('alerts-src')) map.removeSource('alerts-src');
+            if (map.getSource('watches-src')) map.removeSource('watches-src');
             state.alertCounts = {};
             state.activeAlertTypes = [];
+            previousWarnings = [];
+            previousWatchCount = 0;
             updateMapLegend();
             return;
         }
 
-        const response = await fetch(url, {
-            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' },
-            cache: 'no-store'
-        });
-        if (!response.ok) throw new Error('Alerts fetch failed');
-        const data = await response.json();
-        if (!data || !data.features) return;
+        // 1. Fetch live warnings & watches concurrently via AlertsService
+        const [warningFeatures, watchData] = await Promise.all([
+            state.showAlerts ? AlertsService.fetchActiveWarnings(forceRefresh) : Promise.resolve([]),
+            state.showWatches ? AlertsService.fetchWatchPolygons(forceRefresh) : Promise.resolve({ type: 'FeatureCollection', features: [] })
+        ]);
 
-        const beforeId = getLayerAnchor('alerts');
+        state.warningFeatures = warningFeatures;
 
-        // 1. Process Watches via DataProvider
-        let watchData = { type: 'FeatureCollection', features: [] };
-        try {
-            watchData = await DataProvider.fetchWatchPolygons();
-        } catch (e) {
-            console.warn('Watch polygon fetch failed:', e);
+        // 2. Diffing: check if warnings or watches changed
+        const warningsChanged = AlertsService.hasWarningsChanged(warningFeatures, previousWarnings);
+        const watchesChanged = watchData.features.length !== previousWatchCount;
+
+        if (!warningsChanged && !watchesChanged && map.getSource('alerts-src')) {
+            log.alerts('Alerts have not changed since last poll; skipping redraw.');
+            return;
         }
+
+        previousWarnings = warningFeatures;
+        previousWatchCount = watchData.features.length;
+
+        // 3. Render Watches
+        if (map.getLayer('watches-fill')) map.removeLayer('watches-fill');
+        if (map.getLayer('watches-border')) map.removeLayer('watches-border');
+        if (map.getSource('watches-src')) map.removeSource('watches-src');
 
         if (state.showWatches && watchData.features.length > 0) {
             map.addSource('watches-src', { type: 'geojson', data: watchData });
-            
             const watchAnchor = getLayerAnchor('watches');
 
             map.addLayer({
@@ -61,7 +69,7 @@ export async function loadLiveAlerts() {
                         'Severe Thunderstorm Watch', '#db7093',
                         '#808080'
                     ],
-                    'fill-opacity': 0.4
+                    'fill-opacity': 0.35
                 }
             }, watchAnchor);
 
@@ -80,11 +88,13 @@ export async function loadLiveAlerts() {
             }, watchAnchor);
         }
 
-        // 2. Process Warnings
-        const warningFeatures = data.features.filter(f => f.properties.event && f.properties.event.includes('Warning'));
+        // 4. Render Warnings
+        if (map.getLayer('alerts-fill')) map.removeLayer('alerts-fill');
+        if (map.getLayer('alerts-border')) map.removeLayer('alerts-border');
+        if (map.getSource('alerts-src')) map.removeSource('alerts-src');
+
         if (state.showAlerts && warningFeatures.length > 0) {
             map.addSource('alerts-src', { type: 'geojson', data: { type: 'FeatureCollection', features: warningFeatures } });
-            
             const warningAnchor = getLayerAnchor('warnings');
 
             map.addLayer({
@@ -117,21 +127,20 @@ export async function loadLiveAlerts() {
                 }
             }, warningAnchor);
 
-            // Special handling for PDS / Emergency is skipped for now or done via separate layer
+            log.alerts(`Updated warning layers for ${warningFeatures.length} active warnings`);
         }
 
-        // 3. Update Legend counts
+        // 5. Update Legend counts
         const counts = {};
         if (state.showAlerts) warningFeatures.forEach(f => { const e = f.properties.event; counts[e] = (counts[e] || 0) + 1; });
         if (state.showWatches) watchData.features.forEach(f => { const e = f.properties.event; counts[e] = (counts[e] || 0) + 1; });
         
         state.alertCounts = counts;
         state.activeAlertTypes = Object.keys(counts);
-        
         updateMapLegend();
         
     } catch (error) {
-        console.error('Error loading live alerts:', error);
+        log.error('Alerts', 'Error loading live alerts:', error);
     }
 }
 
@@ -140,17 +149,17 @@ export async function loadLiveAlerts() {
  */
 export function handleAlertClick(e, feature) {
     const map = state.map;
-    const p = feature.properties;
+    const p = feature.properties || {};
     const style = ThemeManager.getAlertStyle({ properties: p });
     const color = style.fillColor;
 
     const content = `
         <div class="popup-content max-h-80 overflow-y-auto pr-1">
-            <h4 class="text-lg font-bold mb-1" style="color: ${color}">${p.event}</h4>
+            <h4 class="text-lg font-bold mb-1" style="color: ${color}">${p.event || 'Active Alert'}</h4>
             <p class="text-xs text-slate-300 mb-2">${p.headline || 'Active Alert'}</p>
             <hr class="my-2 border-white/10">
             <div class="text-[10px] text-slate-300 leading-normal mb-3 whitespace-pre-wrap">${p.description || ''}</div>
-            <div class="text-[10px] text-slate-400 font-mono">Expires: ${new Date(p.expires).toLocaleString()}</div>
+            <div class="text-[10px] text-slate-400 font-mono">Expires: ${p.expires ? new Date(p.expires).toLocaleString() : 'N/A'}</div>
         </div>
     `;
 
@@ -159,3 +168,4 @@ export function handleAlertClick(e, feature) {
         .setHTML(content)
         .addTo(map);
 }
+

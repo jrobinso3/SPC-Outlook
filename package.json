@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@americana/maplibre-shield-generator": "^0.1.1",
-    "@fontsource/oswald": "^5.2.8"
+    "@fontsource/oswald": "^5.2.8",
+    "maplibre-gl": "^4.7.1"
   }
 }

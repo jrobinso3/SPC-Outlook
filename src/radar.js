@@ -1,35 +1,27 @@
 import { state, saveAppState } from './state.js';
 import { CONFIG } from './config.js';
 import { stopAnimation, animationState, toggleRadarAnimation } from './radar-animation.js';
+import { RadarService } from './services/radar-service.js';
 import { getLayerAnchor } from './map.js';
+import { log } from './logger.js';
 
 export async function fetchRadarSites() {
+    log.radar('Fetching radar stations via RadarService...');
     try {
-        const response = await fetch('https://api.weather.gov/radar/stations', {
-            headers: { 'User-Agent': 'SPC-Outlook-Dashboard (github.com/jrobinso3/SPC-Outlook)' }
-        });
-        const data = await response.json();
-        
-        state.radarSites = data.features
-            .filter(f => f.properties.stationType === 'WSR-88D')
-            .map(f => ({
-                id: f.properties.id,
-                lat: f.geometry.coordinates[1],
-                lon: f.geometry.coordinates[0],
-                city: f.properties.name
-            }));
-
+        state.radarSites = await RadarService.fetchRadarStations();
+        log.radar(`Loaded ${state.radarSites.length} active WSR-88D radar stations`);
         initRadarMarkers();
-        
+
         if (state.showRadar) {
             if (state.activeRadarId) {
+                log.radar(`Loading active radar: ${state.activeRadarId}`);
                 loadRadar(state.activeRadarId);
             } else {
                 findNearestRadar(true);
             }
         }
     } catch (error) {
-        console.error('Error fetching radar sites:', error);
+        log.error('Radar', 'Error fetching radar sites:', error);
     }
 }
 
@@ -73,11 +65,11 @@ export function initRadarMarkers() {
         const el = document.createElement('div');
         el.className = 'radar-site-label';
         const sid = site.id.toUpperCase();
-        
+
         if (state.activeRadarId?.toUpperCase() === sid) {
             el.classList.add('active-radar');
         }
-        
+
         const span = document.createElement('span');
         span.textContent = sid;
         el.appendChild(span);
@@ -108,7 +100,10 @@ export function loadRadar(stationId, isHeartbeat = false) {
     const targetId = stationId.toUpperCase();
     const station = targetId.toLowerCase();
     const layerName = `${station}_${state.currentRadarProduct}`;
-    
+    if (!isHeartbeat) {
+        log.radar(`Loading radar raster: ${stationId} (Product: ${state.currentRadarProduct})`);
+    }
+
     // Remove existing radar layers
     if (map.getLayer('radar-raster')) map.removeLayer('radar-raster');
     if (map.getSource('radar-src')) map.removeSource('radar-src');
@@ -155,19 +150,9 @@ export function loadRadar(stationId, isHeartbeat = false) {
 export function findNearestRadar(force = false) {
     if (!state.activeRadarId && !force) return;
     const center = state.map.getCenter();
-    
-    let minDistance = Infinity;
-    let nearestSite = null;
+    const nearest = RadarService.findNearestStation(center.lng, center.lat, state.radarSites);
 
-    state.radarSites.forEach(site => {
-        const dist = Math.sqrt(Math.pow(center.lng - site.lon, 2) + Math.pow(center.lat - site.lat, 2));
-        if (dist < minDistance) {
-            minDistance = dist;
-            nearestSite = site;
-        }
-    });
-
-    if (nearestSite && nearestSite.id.toUpperCase() !== state.activeRadarId?.toUpperCase()) {
-        loadRadar(nearestSite.id);
+    if (nearest && nearest.id.toUpperCase() !== state.activeRadarId?.toUpperCase()) {
+        loadRadar(nearest.id);
     }
 }

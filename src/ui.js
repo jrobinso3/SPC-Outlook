@@ -6,8 +6,10 @@ import { loadRadar, findNearestRadar } from './radar.js';
 import { toggleRadarAnimation, stopAnimation } from './radar-animation.js';
 import { updateMapLegend } from './legend.js';
 import { locateUser } from './map.js';
+import { log } from './logger.js';
 
 export function initUIListeners() {
+    log.ui('initUIListeners() executing...');
     const closeBtn = document.getElementById('close-panel');
     const sidePanel = document.getElementById('side-panel');
     const legendToggle = document.getElementById('legend-toggle');
@@ -108,17 +110,26 @@ export function initUIListeners() {
     closeBtn?.addEventListener('click', () => sidePanel.classList.remove('active'));
     layerBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
+        const willBeActive = !layerMenu.classList.contains('active');
+        log.ui('MAP LAYERS button clicked -> setting active to:', willBeActive);
         layerMenu.classList.toggle('active');
     });
     legendToggle?.addEventListener('click', (e) => {
         e.stopPropagation();
+        log.ui('Legend toggle clicked -> opening legend');
         legendContainer.classList.add('active');
     });
-    legendClose?.addEventListener('click', () => legendContainer.classList.remove('active'));
+    legendClose?.addEventListener('click', () => {
+        log.ui('Legend close clicked -> closing legend');
+        legendContainer.classList.remove('active');
+    });
 
     document.addEventListener('click', (e) => {
         if (!layerMenu?.contains(e.target) && !layerBtn?.contains(e.target)) {
-            layerMenu?.classList.remove('active');
+            if (layerMenu?.classList.contains('active')) {
+                log.ui('Outside click detected -> closing layer menu');
+                layerMenu.classList.remove('active');
+            }
         }
     });
 

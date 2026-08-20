@@ -31,8 +31,12 @@ export function updateMapLegend() {
 }
 
 function appendOutlookLegend(container, layerInfo) {
-    const active = state.activeOutlookCategories;
-    if (active.length === 0) return;
+    const active = state.activeOutlookCategories || [];
+    const categories = ThemeManager.getCategories(layerInfo.key);
+    
+    // Show active categories if present, otherwise show all available categories for the layer
+    const displayCats = active.length > 0 ? categories.filter(cat => active.includes(cat)) : categories;
+    if (displayCats.length === 0) return;
 
     const header = document.createElement('div');
     header.className = 'col-span-full text-[10px] font-bold text-blue-400 uppercase tracking-tight mb-1 mt-2 first:mt-0';
@@ -40,9 +44,7 @@ function appendOutlookLegend(container, layerInfo) {
     container.appendChild(header);
 
     // 1. Handle Categorical/Probabilistic levels
-    const categories = ThemeManager.getCategories(layerInfo.key);
-
-    categories.filter(cat => active.includes(cat)).forEach(cat => {
+    displayCats.forEach(cat => {
         const color = ThemeManager.getColor(layerInfo.key, cat);
         const colorClass = cat.match(/^[A-Z]+$/) ? `bg-spc-${cat.toLowerCase()}` : '';
         const item = createLegendItem(cat, color, colorClass);
@@ -60,7 +62,7 @@ function appendOutlookLegend(container, layerInfo) {
         const type = layerInfo.key.includes('torn') ? 'TORNADO' : 
                      layerInfo.key.includes('wind') ? 'WIND' : 'HAIL';
         
-        const label = CONFIG.sigDescriptions[type][sig.key];
+        const label = CONFIG.sigDescriptions[type]?.[sig.key] || sig.label;
         const pattern = ThemeManager.getSigPattern(sig.key);
         const item = createLegendItem(label, pattern, '', false, null, true);
         container.appendChild(item);
@@ -68,28 +70,23 @@ function appendOutlookLegend(container, layerInfo) {
 }
 
 function appendAlertLegend(container) {
-    const activeTypes = state.activeAlertTypes;
+    const activeTypes = state.activeAlertTypes || [];
     if (activeTypes.length === 0) return;
 
     const hasWarnings = state.showAlerts && activeTypes.some(t => t.includes('Warning'));
     const hasWatches = state.showWatches && activeTypes.some(t => t.includes('Watch'));
     if (!hasWarnings && !hasWatches) return;
 
-    // Check active warning layers for PDS/Emergency subtypes
-    const warningFeatures = [];
-    state.activeAlertsLayer?.eachLayer(layer => {
-        layer.eachLayer?.((l) => {
-            if (l.feature) warningFeatures.push(l.feature);
-        });
-    });
+    // Check active warning features for PDS/Emergency subtypes
+    const warningFeatures = state.warningFeatures || [];
     const hasEmergency = warningFeatures.some(f => {
-        const desc = (f.properties.description || '').toUpperCase();
-        const headline = (f.properties.headline || '').toUpperCase();
+        const desc = (f.properties?.description || '').toUpperCase();
+        const headline = (f.properties?.headline || '').toUpperCase();
         return desc.includes('TORNADO EMERGENCY') || headline.includes('EMERGENCY');
     });
     const hasPDS = warningFeatures.some(f => {
-        const desc = (f.properties.description || '').toUpperCase();
-        const headline = (f.properties.headline || '').toUpperCase();
+        const desc = (f.properties?.description || '').toUpperCase();
+        const headline = (f.properties?.headline || '').toUpperCase();
         return desc.includes('PARTICULARLY DANGEROUS SITUATION') || headline.includes('PDS');
     });
 
@@ -98,7 +95,7 @@ function appendAlertLegend(container) {
     header.textContent = 'Severe Weather';
     container.appendChild(header);
 
-    const counts = state.alertCounts;
+    const counts = state.alertCounts || {};
     const alerts = [
         { label: 'TOR Emergency',     color: '#ff00ff', isPDS: true,  show: hasWarnings && hasEmergency,                                          count: null },
         { label: 'TOR Warning (PDS)', color: '#8b0000', isPDS: true,  show: hasWarnings && hasPDS,                                                count: null },

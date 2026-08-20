@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { getLayerAnchor } from './map.js';
+import { RadarService } from './services/radar-service.js';
 
 export const animationState = {
     frames: [],
@@ -16,17 +17,6 @@ export async function toggleRadarAnimation() {
     } else {
         await startAnimation();
     }
-}
-
-async function fetchAvailableTimestamps(station, layerName) {
-    const url = `https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows?service=WMS&request=GetCapabilities`;
-    const response = await fetch(url);
-    const text = await response.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'text/xml');
-    const dimension = xml.querySelector('Dimension[name="time"]');
-    if (!dimension) return [];
-    return dimension.textContent.trim().split(',').map(s => s.trim()).filter(Boolean);
 }
 
 async function startAnimation() {
@@ -46,7 +36,7 @@ async function startAnimation() {
     const cutoff = Date.now() - animationState.windowMinutes * 60 * 1000;
     let timestamps = [];
     try {
-        const all = await fetchAvailableTimestamps(station, layerName);
+        const all = await RadarService.fetchAvailableTimestamps(station, layerName);
         timestamps = all.filter(t => new Date(t).getTime() >= cutoff);
     } catch (e) {
         console.warn('Animation timestamps failed:', e);
@@ -61,7 +51,7 @@ async function startAnimation() {
     animationState.frames = timestamps.map((timeStr, idx) => {
         const id = `radar-frame-${idx}`;
         const wmsUrl = `https://opengeo.ncep.noaa.gov/geoserver/${station}/${layerName}/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${layerName}&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&WIDTH=256&HEIGHT=256&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&TIME=${timeStr}`;
-        
+
         map.addSource(id, { type: 'raster', tiles: [wmsUrl], tileSize: 256 });
         map.addLayer({
             id: id,
@@ -70,17 +60,17 @@ async function startAnimation() {
             paint: { 'raster-opacity': 0 },
             layout: { 'visibility': 'visible' }
         }, beforeId);
-        
+
         return { id, time: timeStr };
     });
 
     animationState.frameDelay = Math.round(2000 / animationState.frames.length);
     animationState.currentIndex = 0;
-    
+
     if (animationState.frames.length > 0) {
         map.setPaintProperty(animationState.frames[0].id, 'raster-opacity', 0.8);
     }
-    
+
     animationState.interval = setInterval(animateFrame, animationState.frameDelay);
     updateUI(true);
 }
@@ -102,7 +92,7 @@ export function stopAnimation(isSwitching = false) {
     if (state.showRadar && state.activeRadarId && !isSwitching) {
         if (map.getLayer('radar-raster')) map.setLayoutProperty('radar-raster', 'visibility', 'visible');
     }
-    
+
     updateUI(false);
 }
 
@@ -116,7 +106,7 @@ function animateFrame() {
     }
 
     animationState.currentIndex = (animationState.currentIndex + 1) % animationState.frames.length;
-    
+
     const nextFrame = animationState.frames[animationState.currentIndex];
     if (nextFrame && map.getLayer(nextFrame.id)) {
         map.setPaintProperty(nextFrame.id, 'raster-opacity', 0.8);
@@ -130,7 +120,7 @@ function updateUI(playing) {
         document.getElementById('toggle-radar-animation'),
         document.getElementById('toggle-radar-animation-header')
     ];
-    
+
     btns.forEach(btn => {
         if (!btn) return;
         if (playing) {
@@ -142,3 +132,4 @@ function updateUI(playing) {
         }
     });
 }
+

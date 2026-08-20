@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { log } from './logger.js';
 
 /**
  * Utility functions for data processing and formatting
@@ -101,9 +102,20 @@ export function cleanDiscussionText(text, baseDateStr) {
 }
 
 export async function fetchGeoJSON(url) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return await response.json();
+    const start = performance.now();
+    try {
+        const response = await fetch(url);
+        const duration = (performance.now() - start).toFixed(0);
+        if (!response.ok) {
+            log.error('API', `Fetch failed [${response.status} ${response.statusText}] in ${duration}ms for URL: ${url}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        log.error('API', `Network/Parse error for URL: ${url}`, err);
+        throw err;
+    }
 }
 
 /**
